@@ -6,14 +6,37 @@
 
 require 'rubygems'
 require 'chatterbot/dsl'
+require 'parse-ruby-client'
 require "pp"
 
 
+
+module LisaOnParse
+
+  # klass => The class name
+  # params => {k1=>v1, k2=>v2}
+  def save(klass, params)
+    puts "Saving in Parse [#{klass}] : #{params.to_json}"
+    obj = Parse::Object.new(klass)
+    params.each { |key, value|
+      obj[key.to_s] = value
+    }
+    obj.save
+    return obj
+  end
+
+end
+
+
+
 class LisaTheBirdie
+  include LisaOnParse
+
   attr_accessor :interesting_stuff, :config
 
   SLEEP_AFTER_ACTION = 60 # secs
   APP_URL = "http://j.mp/yo_bitch"
+  PARSE_KLASS = "People"
 
   def initialize(config)
     consumer_key 'fl8Xb0Lv6CkKdbNAMGB8mBUrG'
@@ -33,6 +56,9 @@ class LisaTheBirdie
     }    
 
     setup_exclusions
+
+    Parse.init :application_id => "ZkdRD4LbeKFxkaviTOmOY29eQ6VaPNV4h96N4qXV",
+               :api_key        => "yVnIz9AoDA3XlZPEMlG7tR9icMdcimm6Cvdxlush" 
   end
 
 
@@ -101,6 +127,7 @@ class LisaTheBirdie
     tweets.each { |tweet|
       puts "Starring [#{tweet.id}][#{tweet.user.handle}] : #{tweet.text}"
       rate_limit(:star) { client.favorite(tweet.id) }
+      save(PARSE_KLASS, {:handle => tweet.user.handle, :mentioned => false, :followed => false, :starred => true})
       random_sleep
     }
   end
@@ -131,6 +158,7 @@ class LisaTheBirdie
     users.each { |user|
       puts "Folllowing [#{user.handle}]"
       rate_limit(:follow) { client.follow(user.handle) }
+      save(PARSE_KLASS, {:handle => user.handle, :mentioned => false, :followed => true, :starred => false})
       random_sleep
     }
   end
