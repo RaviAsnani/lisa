@@ -15,14 +15,30 @@ module LisaOnParse
 
   # klass => The class name
   # params => {k1=>v1, k2=>v2}
-  def save(klass, params)
+  # mode => :create || :update
+  # obj => The parse object if mode==:update
+  def save(klass, params, mode=:create, obj=nil)
     puts "Saving in Parse [#{klass}] : #{params.to_json}"
-    obj = Parse::Object.new(klass)
+    obj = Parse::Object.new(klass) if mode == :create
     params.each { |key, value|
       obj[key.to_s] = value
     }
     obj.save
     return obj
+  end
+
+
+  # klass => The class name
+  # params => {:find_by_key=>"mentioned", :find_by_value=>true, :order_by_key=>"createdAt", :sort=>:descending, :limit=>1}
+  def find(klass, config)
+    objects = Parse::Query.new(klass).tap do |q|
+      q.eq(config[:find_by_key], config[:find_by_value])
+      q.order_by = config[:order_by_key]
+      q.order    = config[:sort].to_sym
+      q.limit    = config[:limit].to_i
+    end.get
+
+    return objects
   end
 
 end
@@ -35,16 +51,36 @@ class LisaTheBirdie
   attr_accessor :interesting_stuff, :config
 
   SLEEP_AFTER_ACTION = 60 # secs
+  SLEEP_AFTER_SHOUTOUT = 60*20 # 20 mins
   APP_URL = "http://j.mp/yo_bitch"
   PARSE_KLASS = "People"
 
-  def initialize(config)
+  def initialize(config=nil)
     consumer_key 'fl8Xb0Lv6CkKdbNAMGB8mBUrG'
     consumer_secret 'mAtdDResuDJp9xwsInihXD5rcDpMEnJ4nMRtOGtcNSH0agbZ28'
     secret 'Qw8AQGMR1K2HAWfZ6GkACLOG66I6UdVIYF9iQcdHUQKgA'
     token '2592724712-o8gSOnGMuwUfaXcB1nGR1hrUIk9YkSDrBX108Fx'  
 
-    @config = config
+    default_config = {
+      :lang => "en", 
+      :tweet => {
+        :min_retweet_count => 1, 
+        :min_star_count => 1,
+        :moderate_retweet_count => 2,
+        :moderate_star_count => 2,  
+        :high_retweet_count => 4,
+        :high_star_count => 4   # To get more starrable tweets into the honeypot :)
+      },
+      :user => {
+        :followers_to_friends_ratio => 0.3,
+        :min_followers_count => 250,
+        :min_star_count => 25,
+        :min_tweet_count => 1000,
+        :account_age => 0
+      }
+    }
+
+    @config = config || default_config
 
     no_update
 
@@ -124,8 +160,9 @@ class LisaTheBirdie
 
   # NOTE - Actually does the stars
   def star(tweets)
-    tweets.each { |tweet|
-      puts "Starring [#{tweet.id}][#{tweet.user.handle}] : #{tweet.text}"
+    length = tweets.length
+    tweets.each_with_index { |tweet, index|
+      puts "Starring (#{index+1}/#{length}) [#{tweet.id}][#{tweet.user.handle}] : #{tweet.text}"
       rate_limit(:star) { client.favorite(tweet.id) }
       save(PARSE_KLASS, {:handle => tweet.user.handle, :mentioned => false, :followed => false, :starred => true})
       random_sleep
@@ -135,8 +172,9 @@ class LisaTheBirdie
 
   # NOTE - Actually does the retweet
   def retweet(tweets)
-    tweets.each { |tweet|
-      puts "Retweet [#{tweet.id}][#{tweet.user.handle}] : #{tweet.text}"
+    length = tweets.length
+    tweets.each_with_index { |tweet, index|
+      puts "Retweet (#{index+1}/#{length}) [#{tweet.id}][#{tweet.user.handle}] : #{tweet.text}"
       rate_limit(:retweet) { client.retweet(tweet.id) }
       random_sleep
     }
@@ -145,8 +183,10 @@ class LisaTheBirdie
 
   # NOTE - Actually does the clone
   def clone(tweets)
-    tweets.each { |tweet|
-      puts "Clone [#{tweet.id}][#{tweet.user.handle}] : #{tweet.text}"
+    length = tweets.length
+    tweets.each_with_index { |tweet, index|
+      length = tweets.length
+      puts "Clone (#{index+1}/#{length}) [#{tweet.id}][#{tweet.user.handle}] : #{tweet.text}"
       rate_limit(:clone) { client.tweet(tweet.text) }
       random_sleep
     }
@@ -154,33 +194,57 @@ class LisaTheBirdie
 
 
   # NOTE - Actually does the follow
-  def follow(users)
-    users.each { |user|
-      puts "Folllowing [#{user.handle}]"
+  def follow(users, do_save = false)
+    length = users.length
+    users.each_with_index { |user, index|
+      puts "Folllowing (#{index+1}/#{length}) [#{user.handle}]"
       rate_limit(:follow) { client.follow(user.handle) }
-      save(PARSE_KLASS, {:handle => user.handle, :mentioned => false, :followed => true, :starred => false})
+      save(PARSE_KLASS, {:handle => user.handle, :mentioned => false, :followed => true, :starred => false}) if do_save == true
       random_sleep
     }
   end
 
 
 
-  # Picks up any 3 friends or followers and asks them to try out the app
-  def shoutout_friends_followers
+  # Picks up any friend or follower and asks them to try out the app
+  def shoutout_for_app_feedback
     media_files = ["./media/twitter_media1.png", "./media/twitter_media2.png"]
     tweet_templates = [
       "A shoutout to __USER__ : try our Yo! B*tch android app, primed for bitching : #{APP_URL}",
-      "__USER__ : would love your feedback on our Yo! B*tch app : #{APP_URL}",
+      "__USER__ would love your feedback on our Yo! B*tch app : #{APP_URL}",
       "__USER__ : what's your take on our Yo! B*tch android app : #{APP_URL}",
-      "__USER__ : try our Yo! B*tch android app : #{APP_URL}",
-      "Love bitching? __USER__, try our Yo! B*tch android app : #{APP_URL}"
+      "__USER__ try our Yo! B*tch android app : #{APP_URL}",
+      "Love bitching? __USER__, try our Yo! B*tch android app : #{APP_URL}",
+      "__USER__ checkout Yo! B*tch android app : #{APP_URL}",
+      "__USER__, have you tried our Yo! B*tch android app : #{APP_URL}",
+      "Bitching made fun! __USER__, try our Yo! B*tch android app : #{APP_URL}",
+      "Seeking feedback on app __USER__. Yo! B*tch app : #{APP_URL}",
+      "Bitching at friends made fun. __USER__ Try Yo! B*tch android app : #{APP_URL}"
     ]
+
+    user = find(PARSE_KLASS, {
+                :find_by_key=>"mentioned", 
+                :find_by_value=>false, 
+                :order_by_key=>"createdAt", 
+                :sort=>:descending, 
+                :limit=>1
+              }).first
+
+    return if user == nil
 
     media = media_files[rand(media_files.length-1)]
     tweet = tweet_templates[rand(tweet_templates.length-1)]
-    rate_limit(:shoutout_friends_followers__update) { 
+
+    tweet.gsub!("__USER__", "@#{user["handle"]}")
+    puts tweet
+    rate_limit(:shoutout_for_app_feedback) { 
       client.update_with_media(tweet, File.new(media))
+      random_sleep(SLEEP_AFTER_ACTION, 2)
+      follow([client.user(user["handle"])], false)
+      save(PARSE_KLASS, {"mentioned" => true, "followed" => true}, :update, user)
     }
+
+    random_sleep(SLEEP_AFTER_SHOUTOUT)
   end
 
 
@@ -206,9 +270,10 @@ class LisaTheBirdie
       block.call
     rescue Twitter::Error::TooManyRequests => error
       puts "Rate limit engaged in #{where}, sleeping for #{error.rate_limit.reset_in} seconds #############################"
-      sleep(error.rate_limit.reset_in)
+      sleep(error.rate_limit.reset_in + 5)
     rescue Exception => e
       puts "Got generic exception..."
+      puts e
       puts e.backtrace
     end
   end
@@ -218,8 +283,8 @@ class LisaTheBirdie
   private
 
 
-  def random_sleep
-    sleep_for = rand(SLEEP_AFTER_ACTION)
+  def random_sleep(how_much = SLEEP_AFTER_ACTION, multiplier = 1)
+    sleep_for = rand(how_much * multiplier)
     puts "Randomly sleeping for #{sleep_for} seconds"
     sleep(sleep_for)
   end
@@ -347,81 +412,6 @@ class LisaTheBirdie
   end
 
 end
-
-
-
-LisaTheBirdie.looper do 
-
-  # Main execution starts here
-  lisa1 = LisaTheBirdie.new({
-    :lang => "en", 
-    :tweet => {
-      :min_retweet_count => 0, 
-      :min_star_count => 0,
-      :moderate_retweet_count => 2,
-      :moderate_star_count => 2,  
-      :high_retweet_count => 4,
-      :high_star_count => 0,   # To get more starrable tweets into the honeypot :)
-    },
-    :user => {
-      :followers_to_friends_ratio => 0.1,
-      :min_followers_count => 100,
-      :min_star_count => 25,
-      :min_tweet_count => 100,
-      :account_age => 0
-    }
-  })
-
-  lisa1.rate_limit(:looper_internal) {
-    puts "=================RUN 1===================="
-    keywords = ['bitching', 'bitch']    
-    interesting_stuff = lisa1.search_tweets(keywords, {:starrable => true})
-    puts interesting_stuff
-    puts "\n\n=============starrable================"
-    lisa1.star(interesting_stuff[:starrable])
-  }
-
-
-
-  # Main execution starts here
-  lisa2 = LisaTheBirdie.new({
-    :lang => "en", 
-    :tweet => {
-      :min_retweet_count => 1, 
-      :min_star_count => 1,
-      :moderate_retweet_count => 2,
-      :moderate_star_count => 2,  
-      :high_retweet_count => 4,
-      :high_star_count => 4,   # To get more starrable tweets into the honeypot :)
-    },
-    :user => {
-      :followers_to_friends_ratio => 0.3,
-      :min_followers_count => 250,
-      :min_star_count => 25,
-      :min_tweet_count => 1000,
-      :account_age => 0
-    }
-  })
-
-  lisa2.rate_limit(:looper_internal) {
-    puts "\n\n=================RUN 2===================="
-    keywords = ['#ruby', '#marketing', '#anroid', '#growthhacking', 
-                '#apps', '#android', '#ios', 'ruboto', '#indiedev', '#startup', '#startups', 
-                '#cloud', '#analytics', 'itunes', 'googleplay', 'facebook', 'twitter', 'apple', 'tech']
-    interesting_stuff = lisa2.search_tweets(keywords)
-    puts interesting_stuff
-    puts "\n\n=============starrable================"
-    lisa2.star(interesting_stuff[:starrable])
-    puts "\n\n=============clonable================"
-    lisa2.clone(interesting_stuff[:clonable])
-    puts "\n\n=============retweetable================"
-    lisa2.retweet(interesting_stuff[:retweetable])        
-    puts "\n\n=============users================"
-    lisa2.follow(interesting_stuff[:users])
-  }
-
-end # End looper
-
 
 
 
