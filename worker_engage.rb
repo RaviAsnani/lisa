@@ -3,7 +3,7 @@
 require "./lisa_the_birdie"
 
 
-LisaTheBirdie.looper do 
+#LisaTheBirdie.looper do 
 
   # # Main execution starts here
   # lisa1 = LisaTheBirdie.new({
@@ -44,21 +44,12 @@ LisaTheBirdie.looper do
     keywords = [['#ruby', '#marketing', '#anroid', '#growthhacking'],
                 ['#apps', '#android', '#ios', 'ruboto', '#indiedev', '#startup', '#startups'],
                 ['#cloud', '#analytics', '#itunes', '#googleplay', '#facebook', '#apple', '#tech'],
-                ['#social', '#product']]
+                ['#social', '#product', 'producthunt']]
     keywords.each do |keyword_set|
-      interesting_stuff = lisa2.search_tweets(keyword_set)
-      puts interesting_stuff
-      puts "\n\n=============starrable================"
-      lisa2.star(interesting_stuff[:starrable])
-      puts "\n\n=============clonable================"
-      lisa2.clone(interesting_stuff[:clonable])
-      puts "\n\n=============retweetable================"
-      lisa2.retweet(interesting_stuff[:retweetable])        
-      puts "\n\n=============users================"
-      lisa2.follow(interesting_stuff[:users])
+      lisa2.feast_on_keywords(keyword_set, {:starrable => true})
     end
   }
 
-end # End looper
+#end # End looper
 
 

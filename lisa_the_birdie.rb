@@ -1,5 +1,3 @@
-#!/usr/bin/env ruby
-
 # https://github.com/muffinista/chatterbot
 # http://rdoc.info/gems/twitter/Twitter/REST/Favorites#favorite-instance_method
 # https://dev.twitter.com/docs/api/1.1
@@ -7,8 +5,6 @@
 require 'rubygems'
 require 'chatterbot/dsl'
 require 'parse-ruby-client'
-require "pp"
-
 
 
 module LisaOnParse
@@ -57,12 +53,18 @@ end
 class LisaTheBirdie
   include LisaOnParse
 
-  attr_accessor :interesting_stuff, :config
+  attr_accessor :config, :bird_food, :bird_food_stats
 
   SLEEP_AFTER_ACTION = 60 # secs
   SLEEP_AFTER_SHOUTOUT = 60*15 # 15 mins
   APP_URL = "http://j.mp/yo_bitch"
   PARSE_KLASS = "People"
+
+
+  class BirdFood < Struct.new(:stuff, :operation)
+  end
+
+
 
   def initialize(config=nil)
     consumer_key 'fl8Xb0Lv6CkKdbNAMGB8mBUrG'
@@ -93,47 +95,19 @@ class LisaTheBirdie
 
     no_update
 
-    @interesting_stuff = {
-      :starrable => [],
-      :retweetable => [],
-      :clonable => [],
-      :users => []
-    }    
+    @bird_food = []
+    @bird_food_stats = {
+      :starrable => 0,
+      :clonable => 0,
+      :retweetable => 0,
+      :followable => 0
+    }
 
     setup_exclusions
 
     Parse.init :application_id => "ZkdRD4LbeKFxkaviTOmOY29eQ6VaPNV4h96N4qXV",
                :api_key        => "yVnIz9AoDA3XlZPEMlG7tR9icMdcimm6Cvdxlush" 
   end
-
-
-
-  # Search based on an array of given keywords
-  # operations => {:starrable => true, :retweetable => true, :clonable => true, :followable => true}
-  def search_tweets(keywords, operations=nil)
-    operations = {:starrable => true, :retweetable => true, :clonable => true, :followable => true} if operations == nil
-    search_text = keywords.length > 1 ? keywords.join(" OR ") : keywords.first
-    puts "Searching for #{search_text}"
-
-    original_search_count = 0
-    rate_limit(:search) {
-      search(search_text, :lang => @config[:lang]) do |tweet| 
-        original_search_count += 1
-        #puts stringify(tweet, :tweet)
-        if is_tweet_of_basic_interest?(tweet) == true
-          rate_limit(:search_tweets) {
-            (@interesting_stuff[:starrable] << tweet if is_starrable?(tweet) == true) if operations[:starrable] == true
-            (@interesting_stuff[:retweetable] << tweet if is_retweetable?(tweet) == true) if operations[:retweetable] == true
-            (@interesting_stuff[:clonable] << tweet if is_clonable?(tweet) == true) if operations[:clonable] == true
-            (@interesting_stuff[:users] << tweet.user if is_followable?(tweet.user) == true) if operations[:followable] == true
-          }
-        end
-      end
-    }
-
-    puts "Original search count : #{original_search_count}"
-    return @interesting_stuff
-  end  
 
 
 
@@ -167,52 +141,59 @@ class LisaTheBirdie
   end
 
 
-  # NOTE - Actually does the stars
-  def star(tweets)
-    length = tweets.length
-    tweets.each_with_index { |tweet, index|
-      puts "Starring (#{index+1}/#{length}) [#{tweet.id}][#{tweet.user.handle}] : #{tweet.text}"
-      rate_limit(:star) { client.favorite(tweet.id) }
-      save(PARSE_KLASS, 
-            {:handle => tweet.user.handle, :mentioned => false, :followed => false, :starred => true})
-      random_sleep
+
+  # Searches and then eats the infested tweets/users
+  def feast_on_keywords(keywords, operations = nil)
+    operations = {:starrable => true, :retweetable => true, :clonable => true, :followable => true} if operations == nil
+    bird_food = search_tweets(keywords, operations)
+
+    # Process all bird food and call their related methods
+    length = bird_food.length
+    bird_food.each_with_index { |food_item, index|
+      puts "Processing [#{index}/#{length}] tweet/user for #{food_item.operation}"
+      self.send(food_item.operation, food_item.stuff)
     }
+  end
+
+
+
+  # NOTE - Actually does the stars
+  def star(tweet)
+    log("Starring tweet (id=>#{tweet.id}) : [#{tweet.user.handle}] : #{tweet.text}")
+    rate_limit(:star) { client.favorite(tweet.id) }
+    save(PARSE_KLASS, 
+          {:handle => tweet.user.handle, :mentioned => false, :followed => false, :starred => true})
+    record_hit(:tweet_infested, tweet.id)
+    random_sleep
   end
 
 
   # NOTE - Actually does the retweet
-  def retweet(tweets)
-    length = tweets.length
-    tweets.each_with_index { |tweet, index|
-      puts "Retweet (#{index+1}/#{length}) [#{tweet.id}][#{tweet.user.handle}] : #{tweet.text}"
-      rate_limit(:retweet) { client.retweet(tweet.id) }
-      random_sleep
-    }
+  def retweet(tweet)
+    log("Retweeting tweet (id=>#{tweet.id}) : [#{tweet.user.handle}] : #{tweet.text}")
+    rate_limit(:retweet) { client.retweet(tweet.id) }
+    record_hit(:tweet_infested, tweet.id)
+    random_sleep
   end
 
 
   # NOTE - Actually does the clone
-  def clone(tweets)
-    length = tweets.length
-    tweets.each_with_index { |tweet, index|
-      length = tweets.length
-      puts "Clone (#{index+1}/#{length}) [#{tweet.id}][#{tweet.user.handle}] : #{tweet.text}"
-      rate_limit(:clone) { client.tweet(tweet.text) }
-      random_sleep
-    }
+  def clone(tweet)
+    log("Cloning tweet (id=>#{tweet.id}) : [#{tweet.user.handle}] : #{tweet.text}")
+    rate_limit(:clone) { client.update(tweet.text) }
+    record_hit(:tweet_infested, tweet.id)
+    random_sleep
   end    
 
 
   # NOTE - Actually does the follow
-  def follow(users, do_save = true)
-    length = users.length
-    users.each_with_index { |user, index|
-      puts "Folllowing (#{index+1}/#{length}) [#{user.handle}]"
-      rate_limit(:follow) { client.follow(user.handle) }
-      save(PARSE_KLASS, 
-            {:handle => user.handle, :mentioned => false, :followed => true, :starred => false}) if do_save == true
-      random_sleep
-    }
+  def follow(user, do_save = true)
+    log("Following user : [#{user.handle}]")
+    rate_limit(:follow) { client.follow(user.handle) }
+    save(PARSE_KLASS, 
+          {:handle => user.handle, :mentioned => false, :followed => true, :starred => false}) if do_save == true
+    record_hit(:followed, user.handle)
+    random_sleep
   end
 
 
@@ -250,9 +231,9 @@ class LisaTheBirdie
     tweet.gsub!("__USER__", "@#{user["handle"]}")
     puts tweet
     rate_limit(:shoutout_for_app_feedback) { 
-      Time.now.to_i % 5 == 0 ? client.update_with_media(tweet, File.new(media)) : client.update(tweet)
+      Time.now.to_i % 3 == 0 ? client.update_with_media(tweet, File.new(media)) : client.update(tweet)
       random_sleep(SLEEP_AFTER_ACTION, 2)
-      follow([client.user(user["handle"])], false)
+      follow(client.user(user["handle"]), false)
       save(PARSE_KLASS, {:mentioned => true, :followed => true, :handle => user["handle"]})
     }
 
@@ -295,6 +276,57 @@ class LisaTheBirdie
   private
 
 
+  # Search based on an array of given keywords
+  # operations => {:starrable => true, :retweetable => true, :clonable => true, :followable => true}
+  def search_tweets(keywords, operations)
+    search_text = keywords.length > 1 ? keywords.join(" OR ") : keywords.first
+    puts "\n======================================================"
+    puts "Searching for #{search_text}"
+
+    original_search_count = 0
+    rate_limit(:search) {
+      search(search_text, :lang => @config[:lang]) do |tweet| 
+        original_search_count += 1
+        #puts stringify(tweet, :tweet)
+        if is_tweet_of_basic_interest?(tweet) == true
+          rate_limit(:search_tweets) {
+            if operations[:starrable] == true and is_starrable?(tweet) == true
+              @bird_food << BirdFood.new(tweet, :star) 
+              @bird_food_stats[:starrable] += 1
+            end
+
+            if operations[:retweetable] == true and is_retweetable?(tweet) == true
+              @bird_food << BirdFood.new(tweet, :retweet) 
+              @bird_food_stats[:retweetable] += 1
+            end
+
+            if operations[:clonable] == true and is_clonable?(tweet) == true
+              @bird_food << BirdFood.new(tweet, :clone) 
+              @bird_food_stats[:clonable] += 1
+            end
+
+            if operations[:users] == true and is_followable?(tweet.user) == true
+              @bird_food << BirdFood.new(tweet.user, :follow) 
+              @bird_food_stats[:followable] += 1
+            end
+          } # rate limit
+        end
+      end
+    }
+
+    puts "Original search count : #{original_search_count}, infestable : #{@bird_food.length}"
+    puts @bird_food_stats.to_json
+    return @bird_food.shuffle!
+  end  
+
+
+
+
+  def log(message)
+    puts "=> #{message}"
+  end
+
+
   def random_sleep(how_much = SLEEP_AFTER_ACTION, multiplier = 1, min_base = 0)
     sleep_for = rand(how_much * multiplier) + min_base
     puts "Randomly sleeping for #{sleep_for} seconds"
@@ -313,6 +345,9 @@ class LisaTheBirdie
   # Figure out which tweet to infest on
   # TODO - how do we check if this is not a dup interaction on the user?
   def is_tweet_of_basic_interest?(tweet)
+    # Don't process the tweet if we have already infested it before
+    return false if check_hit?(:tweet_infested, tweet.id) == true
+
     score = 0
     score += 1 if tweet.retweet_count >= @config[:tweet][:min_retweet_count] 
     score += 1 if tweet.favorite_count >= @config[:tweet][:min_star_count] 
@@ -326,14 +361,7 @@ class LisaTheBirdie
     # Not a reply, High star count
     if tweet.favorite_count >= @config[:tweet][:high_star_count] \
           and tweet.reply? == false
-
-      # Only star if the tweet is not already starred
-      if check_hit?(:tweet_infested, tweet.id) == false
-        record_hit(:tweet_infested, tweet.id)
-        return true
-      else
-        puts "Found dup hit in is_starrable? : #{tweet.id} @#{tweet.user.handle} ================================="
-      end
+      return true
     end
     return false
   end
@@ -346,14 +374,7 @@ class LisaTheBirdie
               and tweet.retweet_count >= @config[:tweet][:high_retweet_count]  \
               and tweet.reply? == false)) \
           or (is_followable?(tweet.user) == true)
-      
-      # Only retweet if the tweet is not already processed
-      if check_hit?(:tweet_infested, tweet.id) == false
-        record_hit(:tweet_infested, tweet.id)
-        return true
-      else
-        puts "Found dup hit in is_retweetable? : #{tweet.id} @#{tweet.user.handle} ================================="
-      end
+      return true
     end
     return false
   end
@@ -365,14 +386,7 @@ class LisaTheBirdie
     if (tweet.favorite_count >= @config[:tweet][:moderate_star_count] \
           and tweet.retweet_count >= @config[:tweet][:moderate_retweet_count]  \
           and tweet.reply? == false)
-      
-      # Only clone if the tweet is not already processed
-      if check_hit?(:tweet_infested, tweet.id) == false
-        record_hit(:tweet_infested, tweet.id)
-        return true
-      else
-        puts "Found dup hit in is_clonable? : #{tweet.id} @#{tweet.user.handle} ================================="
-      end
+      return true
     end
     return false
   end
@@ -400,10 +414,9 @@ class LisaTheBirdie
       
       # Only follow if the user is not already being followed
       if check_hit?(:followed, user.handle) == false
-        record_hit(:followed, user.handle)
         return true
       else
-        puts "Found dup hit in is_followable? @#{user.handle} ================================="
+        #puts "Found dup hit in is_followable? @#{user.handle} ================================="
       end        
     end
 
@@ -419,13 +432,8 @@ class LisaTheBirdie
   end
 
   def check_hit?(klass, data)
-    command = "cat #{klass.to_s}.txt | grep '#{data}'"
+    command = "grep '#{data}' #{klass.to_s}.txt 1>/dev/null"
     return system(command)
-  end
-
-
-  def is_infested_tweet?(type, tweet)
-    
   end
 
 end
