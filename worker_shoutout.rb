@@ -1,4 +1,6 @@
-require "lisa_the_birdie"
+#!/usr/bin/env ruby
+
+require "./lisa_the_birdie"
 
 lisa = LisaTheBirdie.new
 

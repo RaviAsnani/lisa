@@ -15,11 +15,20 @@ module LisaOnParse
 
   # klass => The class name
   # params => {k1=>v1, k2=>v2}
-  # mode => :create || :update
-  # obj => The parse object if mode==:update
-  def save(klass, params, mode=:create, obj=nil)
+  # params[:handle] is an expected key for now - OR the object would be created as new
+  # First searches for a unique reference of params[:handle] and then either updates the found object or creates new
+  def save(klass, params)
     puts "Saving in Parse [#{klass}] : #{params.to_json}"
-    obj = Parse::Object.new(klass) if mode == :create
+
+    raise if params[:handle] == nil
+    
+    obj = find(klass, {
+            :find_by_key => "handle", # handle is the primary key for all save operations
+            :find_by_value => params[:handle], 
+            :limit => 1
+          }).first
+
+    obj = obj || Parse::Object.new(klass)
     params.each { |key, value|
       obj[key.to_s] = value
     }
@@ -34,7 +43,7 @@ module LisaOnParse
     objects = Parse::Query.new(klass).tap do |q|
       q.eq(config[:find_by_key], config[:find_by_value])
       q.order_by = config[:order_by_key]
-      q.order    = config[:sort].to_sym
+      q.order    = config[:sort]
       q.limit    = config[:limit].to_i
     end.get
 
@@ -51,7 +60,7 @@ class LisaTheBirdie
   attr_accessor :interesting_stuff, :config
 
   SLEEP_AFTER_ACTION = 60 # secs
-  SLEEP_AFTER_SHOUTOUT = 60*20 # 20 mins
+  SLEEP_AFTER_SHOUTOUT = 60*15 # 15 mins
   APP_URL = "http://j.mp/yo_bitch"
   PARSE_KLASS = "People"
 
@@ -164,7 +173,8 @@ class LisaTheBirdie
     tweets.each_with_index { |tweet, index|
       puts "Starring (#{index+1}/#{length}) [#{tweet.id}][#{tweet.user.handle}] : #{tweet.text}"
       rate_limit(:star) { client.favorite(tweet.id) }
-      save(PARSE_KLASS, {:handle => tweet.user.handle, :mentioned => false, :followed => false, :starred => true})
+      save(PARSE_KLASS, 
+            {:handle => tweet.user.handle, :mentioned => false, :followed => false, :starred => true})
       random_sleep
     }
   end
@@ -194,19 +204,21 @@ class LisaTheBirdie
 
 
   # NOTE - Actually does the follow
-  def follow(users, do_save = false)
+  def follow(users, do_save = true)
     length = users.length
     users.each_with_index { |user, index|
       puts "Folllowing (#{index+1}/#{length}) [#{user.handle}]"
       rate_limit(:follow) { client.follow(user.handle) }
-      save(PARSE_KLASS, {:handle => user.handle, :mentioned => false, :followed => true, :starred => false}) if do_save == true
+      save(PARSE_KLASS, 
+            {:handle => user.handle, :mentioned => false, :followed => true, :starred => false}) if do_save == true
       random_sleep
     }
   end
 
 
 
-  # Picks up any friend or follower and asks them to try out the app
+  # Picks up any friend or follower and asks them to try out the app, then follows them
+  # Sleeps for SLEEP_AFTER_SHOUTOUT seconds after each shoutout
   def shoutout_for_app_feedback
     media_files = ["./media/twitter_media1.png", "./media/twitter_media2.png"]
     tweet_templates = [
@@ -215,36 +227,36 @@ class LisaTheBirdie
       "__USER__ : what's your take on our Yo! B*tch android app : #{APP_URL}",
       "__USER__ try our Yo! B*tch android app : #{APP_URL}",
       "Love bitching? __USER__, try our Yo! B*tch android app : #{APP_URL}",
-      "__USER__ checkout Yo! B*tch android app : #{APP_URL}",
+      "__USER__ checkout our Yo! B*tch android app : #{APP_URL}",
       "__USER__, have you tried our Yo! B*tch android app : #{APP_URL}",
       "Bitching made fun! __USER__, try our Yo! B*tch android app : #{APP_URL}",
-      "Seeking feedback on app __USER__. Yo! B*tch app : #{APP_URL}",
-      "Bitching at friends made fun. __USER__ Try Yo! B*tch android app : #{APP_URL}"
+      "Seeking feedback on our app __USER__. Yo! B*tch app : #{APP_URL}",
+      "Bitching at friends made fun. __USER__ Try our Yo! B*tch android app : #{APP_URL}"
     ]
 
     user = find(PARSE_KLASS, {
-                :find_by_key=>"mentioned", 
-                :find_by_value=>false, 
-                :order_by_key=>"createdAt", 
-                :sort=>:descending, 
-                :limit=>1
+                :find_by_key => "mentioned", 
+                :find_by_value => false, 
+                :order_by_key => "createdAt", 
+                :sort => :descending, 
+                :limit => 1
               }).first
 
     return if user == nil
 
-    media = media_files[rand(media_files.length-1)]
-    tweet = tweet_templates[rand(tweet_templates.length-1)]
+    media = media_files[rand(media_files.length)]
+    tweet = tweet_templates[rand(tweet_templates.length)]
 
     tweet.gsub!("__USER__", "@#{user["handle"]}")
     puts tweet
     rate_limit(:shoutout_for_app_feedback) { 
-      client.update_with_media(tweet, File.new(media))
+      Time.now.to_i % 5 == 0 ? client.update_with_media(tweet, File.new(media)) : client.update(tweet)
       random_sleep(SLEEP_AFTER_ACTION, 2)
       follow([client.user(user["handle"])], false)
-      save(PARSE_KLASS, {"mentioned" => true, "followed" => true}, :update, user)
+      save(PARSE_KLASS, {:mentioned => true, :followed => true, :handle => user["handle"]})
     }
 
-    random_sleep(SLEEP_AFTER_SHOUTOUT)
+    random_sleep(SLEEP_AFTER_SHOUTOUT, 1, SLEEP_AFTER_SHOUTOUT)
   end
 
 
@@ -283,8 +295,8 @@ class LisaTheBirdie
   private
 
 
-  def random_sleep(how_much = SLEEP_AFTER_ACTION, multiplier = 1)
-    sleep_for = rand(how_much * multiplier)
+  def random_sleep(how_much = SLEEP_AFTER_ACTION, multiplier = 1, min_base = 0)
+    sleep_for = rand(how_much * multiplier) + min_base
     puts "Randomly sleeping for #{sleep_for} seconds"
     sleep(sleep_for)
   end
@@ -409,6 +421,11 @@ class LisaTheBirdie
   def check_hit?(klass, data)
     command = "cat #{klass.to_s}.txt | grep '#{data}'"
     return system(command)
+  end
+
+
+  def is_infested_tweet?(type, tweet)
+    
   end
 
 end
