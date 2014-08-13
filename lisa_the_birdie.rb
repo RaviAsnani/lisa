@@ -56,7 +56,8 @@ class LisaTheBirdie
   attr_accessor :config, :bird_food, :bird_food_stats
 
   SLEEP_AFTER_ACTION = 60 # secs
-  SLEEP_AFTER_SHOUTOUT = 60*15 # 15 mins
+  SLEEP_AFTER_SHOUTOUT = 60*10 # 15 mins
+  SLEEP_AFTER_RATE_LIMIT_ENGAGED = 60*5 # 5 min
   APP_URL = "http://j.mp/yo_bitch"
   PARSE_KLASS = "People"
 
@@ -66,13 +67,17 @@ class LisaTheBirdie
 
 
 
-  def initialize(config=nil)
-    consumer_key 'fl8Xb0Lv6CkKdbNAMGB8mBUrG'
-    consumer_secret 'mAtdDResuDJp9xwsInihXD5rcDpMEnJ4nMRtOGtcNSH0agbZ28'
-    secret 'Qw8AQGMR1K2HAWfZ6GkACLOG66I6UdVIYF9iQcdHUQKgA'
-    token '2592724712-o8gSOnGMuwUfaXcB1nGR1hrUIk9YkSDrBX108Fx'  
+  def initialize(config = {})
+    # Safety net
+    raise if config[:auth][:consumer_key].nil? or config[:auth][:consumer_secret].nil? or config[:auth][:token].nil? or config[:auth][:secret].nil?
 
     default_config = {
+      :auth => {
+        :consumer_key => nil,
+        :consumer_secret => nil,
+        :token => nil,
+        :secret => nil
+      },
       :lang => "en", 
       :tweet => {
         :min_retweet_count => 1, 
@@ -88,10 +93,17 @@ class LisaTheBirdie
         :min_star_count => 25,
         :min_tweet_count => 1000,
         :account_age => 0
-      }
+      },
+      :exclude => [] # Array of strings
     }
 
-    @config = config || default_config
+    @config = default_config.merge(config)
+
+    # Setup the client
+    consumer_key(@config[:auth][:consumer_key])
+    consumer_secret(@config[:auth][:consumer_secret])
+    token(@config[:auth][:token])
+    secret(@config[:auth][:secret])
 
     no_update
 
@@ -103,7 +115,7 @@ class LisaTheBirdie
       :followable => 0
     }
 
-    setup_exclusions
+    setup_exclusions(@config[:exclude])
 
     Parse.init :application_id => "ZkdRD4LbeKFxkaviTOmOY29eQ6VaPNV4h96N4qXV",
                :api_key        => "yVnIz9AoDA3XlZPEMlG7tR9icMdcimm6Cvdxlush" 
@@ -150,7 +162,8 @@ class LisaTheBirdie
     # Process all bird food and call their related methods
     length = bird_food.length
     bird_food.each_with_index { |food_item, index|
-      puts "Processing [#{index}/#{length}] tweet/user for #{food_item.operation}"
+      log "-------------------------------------------------------------------"
+      log "Processing [#{index}/#{length}] tweet/user for #{food_item.operation}"
       self.send(food_item.operation, food_item.stuff)
     }
   end
@@ -164,7 +177,7 @@ class LisaTheBirdie
     save(PARSE_KLASS, 
           {:handle => tweet.user.handle, :mentioned => false, :followed => false, :starred => true})
     record_hit(:tweet_infested, tweet.id)
-    random_sleep
+    random_sleep(SLEEP_AFTER_ACTION, 1, SLEEP_AFTER_ACTION)
   end
 
 
@@ -173,7 +186,7 @@ class LisaTheBirdie
     log("Retweeting tweet (id=>#{tweet.id}) : [#{tweet.user.handle}] : #{tweet.text}")
     rate_limit(:retweet) { client.retweet(tweet.id) }
     record_hit(:tweet_infested, tweet.id)
-    random_sleep
+    random_sleep(SLEEP_AFTER_ACTION, 1, SLEEP_AFTER_ACTION)
   end
 
 
@@ -182,7 +195,7 @@ class LisaTheBirdie
     log("Cloning tweet (id=>#{tweet.id}) : [#{tweet.user.handle}] : #{tweet.text}")
     rate_limit(:clone) { client.update(tweet.text) }
     record_hit(:tweet_infested, tweet.id)
-    random_sleep
+    random_sleep(SLEEP_AFTER_ACTION, 1, SLEEP_AFTER_ACTION)
   end    
 
 
@@ -193,7 +206,7 @@ class LisaTheBirdie
     save(PARSE_KLASS, 
           {:handle => user.handle, :mentioned => false, :followed => true, :starred => false}) if do_save == true
     record_hit(:followed, user.handle)
-    random_sleep
+    random_sleep(SLEEP_AFTER_ACTION, 1, SLEEP_AFTER_ACTION)
   end
 
 
@@ -263,7 +276,7 @@ class LisaTheBirdie
       block.call
     rescue Twitter::Error::TooManyRequests => error
       puts "Rate limit engaged in #{where}, sleeping for #{error.rate_limit.reset_in} seconds #############################"
-      sleep(error.rate_limit.reset_in + 5)
+      sleep(error.rate_limit.reset_in + rand(SLEEP_AFTER_RATE_LIMIT_ENGAGED) + 10)
     rescue Exception => e
       puts "Got generic exception..."
       puts e
@@ -305,7 +318,7 @@ class LisaTheBirdie
               @bird_food_stats[:clonable] += 1
             end
 
-            if operations[:users] == true and is_followable?(tweet.user) == true
+            if operations[:followable] == true and is_followable?(tweet.user) == true
               @bird_food << BirdFood.new(tweet.user, :follow) 
               @bird_food_stats[:followable] += 1
             end
@@ -314,7 +327,7 @@ class LisaTheBirdie
       end
     }
 
-    puts "Original search count : #{original_search_count}, infestable : #{@bird_food.length}"
+    puts "\nOriginal search count : #{original_search_count}, infestable : #{@bird_food.length}"
     puts @bird_food_stats.to_json
     return @bird_food.shuffle!
   end  
@@ -327,6 +340,7 @@ class LisaTheBirdie
   end
 
 
+  # Min base will be added to all random sleeps
   def random_sleep(how_much = SLEEP_AFTER_ACTION, multiplier = 1, min_base = 0)
     sleep_for = rand(how_much * multiplier) + min_base
     puts "Randomly sleeping for #{sleep_for} seconds"
@@ -336,8 +350,9 @@ class LisaTheBirdie
 
 
   # TODO - relook into this
-  def setup_exclusions
-    exclude "spammer", "junk", "spam", "fuck", "pussy", "ass", "shit", "piss", "cunt", "mofo", "cock", "tits", "wife", "sex", "porn"
+  def setup_exclusions(custom_exclude_list = [])
+    default_exclusion = ["spammer", "junk", "spam", "fuck", "pussy", "ass", "shit", "piss", "cunt", "mofo", "cock", "tits", "wife", "sex", "porn"]
+    exclude(default_exclusion + custom_exclude_list)
   end
 
 
@@ -382,8 +397,8 @@ class LisaTheBirdie
 
   # If tweet is worthy of being clonable (copy=>paste basically)
   def is_clonable?(tweet)
-    # Not a reply, High star count, High retweet count
-    if (tweet.favorite_count >= @config[:tweet][:moderate_star_count] \
+    # Not a reply, Min star count, High retweet count
+    if (tweet.favorite_count >= @config[:tweet][:min_star_count] \
           and tweet.retweet_count >= @config[:tweet][:moderate_retweet_count]  \
           and tweet.reply? == false)
       return true
@@ -432,6 +447,7 @@ class LisaTheBirdie
   end
 
   def check_hit?(klass, data)
+    print "?"
     command = "grep '#{data}' #{klass.to_s}.txt 1>/dev/null"
     return system(command)
   end
