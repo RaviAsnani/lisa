@@ -66,7 +66,10 @@ module LisaToolbox
     puts "################################################################"
     puts "Starting Thread #{name} at #{Time.now}"
 
-    block.call
+    # Don't wait for it to finish
+    Thread.start do
+      block.call
+    end
 
     puts "Ending Thread #{name} at #{Time.now}"
     puts "################################################################"    
