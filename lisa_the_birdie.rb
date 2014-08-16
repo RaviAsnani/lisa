@@ -7,6 +7,131 @@ require 'chatterbot/dsl'
 require 'parse-ruby-client'
 
 
+# All utility methods which Lisa needs - but are not related to being a bird
+module LisaToolbox
+
+  SLEEP_AFTER_RATE_LIMIT_ENGAGED = 60*5 # 5 min
+  SLEEP_GENERIC = 60 # secs
+
+
+  # klass => :tweet || :user
+  # obj => Tweet object or User object
+  def stringify(obj, klass)
+    if klass == :tweet
+      data = {
+        :id => obj.id,
+        :text => obj.text,
+        :stars => obj.favorite_count,
+        :retweets => obj.retweet_count,
+        :url => obj.url.to_s,
+        :user_handle => obj.user.handle,
+        :user_followers => obj.user.followers_count,
+        :user_friends => obj.user.friends_count,
+        :user_tweets => obj.user.tweets_count,
+        :user_stars => obj.user.favorites_count,
+        :user_url => obj.user.url.to_s
+      }
+    else
+      data = {
+        :id => obj.id,
+        :user_handle => obj.handle,
+        :user_followers => obj.followers_count,
+        :user_friends => obj.friends_count,
+        :user_tweets => obj.tweets_count,
+        :user_stars => obj.favorites_count,
+        :user_url => obj.url.to_s
+      }
+    end
+    return data
+  end
+
+
+
+  # Helper method to loop
+  def self.looper(&block)
+    loop do
+      puts "################################################################"
+      puts "Starting Looper at #{Time.now}"
+
+      block.call
+
+      puts "Ending Looper at #{Time.now}"
+      puts "################################################################"
+    end
+  end
+
+
+  # Runs the given block of code in a new thread
+  def self.run_in_new_thread(name, &block)
+    puts "################################################################"
+    puts "Starting Thread #{name} at #{Time.now}"
+
+    block.call
+
+    puts "Ending Thread #{name} at #{Time.now}"
+    puts "################################################################"    
+  end
+
+
+
+  # Calls the given block with a sleeping factor of the rate limiting
+  # Currently we don't care about the lost activity as we don't redo
+  def rate_limit(where, &block)
+    begin
+      block.call
+    rescue Twitter::Error::TooManyRequests => error
+      puts "Rate limit engaged in #{where}, sleeping for #{error.rate_limit.reset_in} seconds #############################"
+      sleep(error.rate_limit.reset_in + rand(SLEEP_AFTER_RATE_LIMIT_ENGAGED) + 10)
+    rescue Exception => e
+      puts "Got generic exception..."
+      puts e
+      puts e.backtrace
+    end
+  end  
+
+
+  # Generic logging
+  def log(message)
+    puts "=> [#{Time.now.to_s.split(" ")[0..1].join(" ")}] #{message}"
+  end
+
+
+  # Min base will be added to all random sleeps
+  def random_sleep(how_much = SLEEP_GENERIC, multiplier = 1, min_base = 0)
+    sleep_for = rand(how_much * multiplier) + min_base
+    puts "Randomly sleeping for #{sleep_for} seconds"
+    sleep(sleep_for)
+  end
+
+
+  # Executes the given block after random time in a new thread
+  def do_later(random_sleep_max_time = SLEEP_GENERIC, multiplier = 1, min_base = 0, &block)
+    Thread.start do
+      random_sleep(random_sleep_max_time, multiplier, min_base)
+      block.call
+    end
+  end
+
+
+
+  # klass => :starred, :followed
+  # data => actual value to record. Tweet.id in case of starred, user.handle in case of followed
+  def record_hit(klass, data)
+    system("echo '#{data}' >> #{klass.to_s}.txt")
+  end
+
+  def check_hit?(klass, data)
+    print "?"
+    command = "grep '#{data}' #{klass.to_s}.txt 1>/dev/null"
+    return system(command)
+  end
+
+end
+
+
+
+
+# All methods which are required by Lisa to work with Parse
 module LisaOnParse
 
   # klass => The class name
@@ -50,14 +175,140 @@ end
 
 
 
+
+# A class which governs how Lisa responds to the user's incoming/outgoing personal communication
+class LisaTheChattyBird
+  include LisaToolbox
+
+  attr_accessor :stream, :client, :myself
+
+  # config is the same config object which is received by LisaTheBirdie
+  def initialize(config_params)
+    @config = config_params
+    @stream = Twitter::Streaming::Client.new do |config|
+      config.consumer_key        = @config[:auth][:consumer_key]
+      config.consumer_secret     = @config[:auth][:consumer_secret]
+      config.access_token        = @config[:auth][:token]
+      config.access_token_secret = @config[:auth][:secret]
+    end
+
+    @client = Twitter::REST::Client.new do |config|
+      config.consumer_key        = @config[:auth][:consumer_key]
+      config.consumer_secret     = @config[:auth][:consumer_secret]
+      config.access_token        = @config[:auth][:token]
+      config.access_token_secret = @config[:auth][:secret]
+    end
+
+    @myself = @client.user.handle
+
+    setup_event_loop
+  end
+
+
+  private
+
+
+  def setup_event_loop
+
+    @stream.user do |object|
+      case object
+        when Twitter::Tweet
+          on_timeline_tweet(object)
+        when Twitter::DirectMessage
+          on_dm(object)
+        when Twitter::Streaming::Event
+          #puts object.name, object.name.class
+          case object.name
+            when :list_member_added
+              on_list_member_added(object.source, object.target, object.target_object)
+            when :favorite
+              on_star(object.source, object.target, object.target_object)
+            when :follow
+              on_follow(object.source, object.target)
+            when :unfollow
+              puts "Unfollow from #{object.target.handle}"
+          end
+        when Twitter::Streaming::FriendList
+          ;
+        when Twitter::Streaming::StallWarning
+          on_stall_warning
+        else
+          #puts object.id if object.class == Twitter::Streaming::DeletedTweet
+          puts object, object.id, object.user_id
+      end # case
+    end   # stream
+
+  end
+
+
+  # On a star
+  # Follow the source user if target is self
+  def on_star(source, target, tweet)
+    puts "--------------------------------------on_star--------------------------------------------"
+    log("Got starred (source : #{source.handle}, target : #{target.handle}) : #{tweet.text}")
+    log("#{target.handle} follows #{source.handle} ? : #{client.user(source.handle).following?}")  
+    if @client.user(source.handle).following? == false && source.handle != @myself
+      log("Will follow #{source.handle}")
+      rate_limit(:on_star__follow) { @client.follow(source.handle) }
+    end
+    puts "--------------------------------------on_star--------------------------------------------"
+  end
+
+
+  # When a user is added to a list
+  def on_list_member_added(source, target, list)
+    log("Got new addition to list : #{target.handle}")
+  end
+
+
+  # On a follow
+  # This event is invoked on all possible follow events - either to me or from me
+  def on_follow(source, target)
+    return if target.handle != @myself
+
+    log("Follow event from #{source.handle}")
+    
+    message1 = "Hey! Thanks for following. Let's stay in touch."
+    #message2 = "I forgot to mention the Yo! B*tch app we are working on. Would love your feedback on it. http://j.mp/yo_bitch"
+
+    do_later(SLEEP_GENERIC, 2, SLEEP_GENERIC) { 
+      puts "Sending DM1"
+      @client.create_direct_message(source.handle, message1)
+    }
+  end
+
+
+  # On a DM
+  # This event is invoked on all possible follow events - either to me or from me
+  def on_dm(message)
+    log("DM : #{message.text}")
+  end
+
+
+  # On twitter's stall warning
+  def on_stall_warning
+    log("Stall warning from Twiiter")
+  end
+
+
+  # On a new timeline tweet
+  def on_timeline_tweet(tweet)
+  end
+
+end
+
+
+
+
+
 class LisaTheBirdie
   include LisaOnParse
+  include LisaToolbox
 
   attr_accessor :config, :bird_food, :bird_food_stats
 
   SLEEP_AFTER_ACTION = 60 # secs
   SLEEP_AFTER_SHOUTOUT = 60*10 # 15 mins
-  SLEEP_AFTER_RATE_LIMIT_ENGAGED = 60*5 # 5 min
   APP_URL = "http://j.mp/yo_bitch"
   PARSE_KLASS = "People"
 
@@ -70,6 +321,7 @@ class LisaTheBirdie
   def initialize(config = {})
     # Safety net
     raise if config[:auth][:consumer_key].nil? or config[:auth][:consumer_secret].nil? or config[:auth][:token].nil? or config[:auth][:secret].nil?
+    raise if config[:parse][:application_id].nil? or config[:parse][:api_key].nil?
 
     default_config = {
       :auth => {
@@ -77,6 +329,10 @@ class LisaTheBirdie
         :consumer_secret => nil,
         :token => nil,
         :secret => nil
+      },
+      :parse => {
+        :application_id => nil,
+        :api_key => nil
       },
       :lang => "en", 
       :tweet => {
@@ -117,40 +373,10 @@ class LisaTheBirdie
 
     setup_exclusions(@config[:exclude])
 
-    Parse.init :application_id => "ZkdRD4LbeKFxkaviTOmOY29eQ6VaPNV4h96N4qXV",
-               :api_key        => "yVnIz9AoDA3XlZPEMlG7tR9icMdcimm6Cvdxlush" 
+    Parse.init :application_id => config[:parse][:application_id],
+               :api_key        => config[:parse][:api_key]     
   end
 
-
-
-  def stringify(obj, klass)
-    if klass == :tweet
-      data = {
-        :id => obj.id,
-        :text => obj.text,
-        :stars => obj.favorite_count,
-        :retweets => obj.retweet_count,
-        :url => obj.url.to_s,
-        :user_handle => obj.user.handle,
-        :user_followers => obj.user.followers_count,
-        :user_friends => obj.user.friends_count,
-        :user_tweets => obj.user.tweets_count,
-        :user_stars => obj.user.favorites_count,
-        :user_url => obj.user.url.to_s
-      }
-    else
-      data = {
-        :id => obj.id,
-        :user_handle => obj.handle,
-        :user_followers => obj.followers_count,
-        :user_friends => obj.friends_count,
-        :user_tweets => obj.tweets_count,
-        :user_stars => obj.favorites_count,
-        :user_url => obj.url.to_s
-      }
-    end
-    return data
-  end
 
 
 
@@ -255,37 +481,6 @@ class LisaTheBirdie
 
 
 
-  # Helper method to loop
-  def self.looper(&block)
-    loop do
-      puts "################################################################"
-      puts "Starting LisaTheBirdie at #{Time.now}"
-
-      block.call
-
-      puts "Ending LisaTheBirdie at #{Time.now}"
-      puts "################################################################"
-    end
-  end
-
-
-  # Calls the given block with a sleeping factor of the rate limiting
-  # Currently we don't care about the lost activity as we don't redo
-  def rate_limit(where, &block)
-    begin
-      block.call
-    rescue Twitter::Error::TooManyRequests => error
-      puts "Rate limit engaged in #{where}, sleeping for #{error.rate_limit.reset_in} seconds #############################"
-      sleep(error.rate_limit.reset_in + rand(SLEEP_AFTER_RATE_LIMIT_ENGAGED) + 10)
-    rescue Exception => e
-      puts "Got generic exception..."
-      puts e
-      puts e.backtrace
-    end
-  end
-
-
-
   private
 
 
@@ -335,23 +530,9 @@ class LisaTheBirdie
 
 
 
-  def log(message)
-    puts "=> #{message}"
-  end
-
-
-  # Min base will be added to all random sleeps
-  def random_sleep(how_much = SLEEP_AFTER_ACTION, multiplier = 1, min_base = 0)
-    sleep_for = rand(how_much * multiplier) + min_base
-    puts "Randomly sleeping for #{sleep_for} seconds"
-    sleep(sleep_for)
-  end
-
-
-
   # TODO - relook into this
   def setup_exclusions(custom_exclude_list = [])
-    default_exclusion = ["spammer", "junk", "spam", "fuck", "pussy", "ass", "shit", "piss", "cunt", "mofo", "cock", "tits", "wife", "sex", "porn"]
+    default_exclusion = ["money", "spammer", "junk", "spam", "fuck", "pussy", "ass", "shit", "piss", "cunt", "mofo", "cock", "tits", "wife", "sex", "porn"]
     exclude(default_exclusion + custom_exclude_list)
   end
 
@@ -438,19 +619,6 @@ class LisaTheBirdie
     return false
   end
 
-
-
-  # klass => :starred, :followed
-  # data => actual value to record. Tweet.id in case of starred, user.handle in case of followed
-  def record_hit(klass, data)
-    system("echo '#{data}' >> #{klass.to_s}.txt")
-  end
-
-  def check_hit?(klass, data)
-    print "?"
-    command = "grep '#{data}' #{klass.to_s}.txt 1>/dev/null"
-    return system(command)
-  end
 
 end
 

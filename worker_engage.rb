@@ -3,7 +3,7 @@
 require "./lisa_the_birdie"
 
 
-LisaTheBirdie.looper do 
+LisaToolbox.looper do 
 
   # # Main execution starts here
   # lisa1 = LisaTheBirdie.new({
@@ -13,6 +13,10 @@ LisaTheBirdie.looper do
   #     :token =>'2592724712-o8gSOnGMuwUfaXcB1nGR1hrUIk9YkSDrBX108Fx',
   #     :secret => 'Qw8AQGMR1K2HAWfZ6GkACLOG66I6UdVIYF9iQcdHUQKgA'
   #   },
+  #     :parse => {
+  #       :application_id => "ZkdRD4LbeKFxkaviTOmOY29eQ6VaPNV4h96N4qXV",
+  #       :api_key => "yVnIz9AoDA3XlZPEMlG7tR9icMdcimm6Cvdxlush" 
+  #     },  
   #   :exclude => ["yobitchme", "Easy_Branches"],
   #   :lang => "en", 
   #   :tweet => {
@@ -51,20 +55,25 @@ LisaTheBirdie.looper do
         :token =>'2592724712-o8gSOnGMuwUfaXcB1nGR1hrUIk9YkSDrBX108Fx',
         :secret => 'Qw8AQGMR1K2HAWfZ6GkACLOG66I6UdVIYF9iQcdHUQKgA'
       },
-      :exclude => ["yobitchme", "Easy_Branches"]
+      :parse => {
+        :application_id => "ZkdRD4LbeKFxkaviTOmOY29eQ6VaPNV4h96N4qXV",
+        :api_key => "yVnIz9AoDA3XlZPEMlG7tR9icMdcimm6Cvdxlush" 
+      },
+      :exclude => ["yobitchme", "Easy_Branches", "RachelMajor2000", "gamedev", "indiedev"]
     })
 
   lisa2.rate_limit(:looper_internal) {
     puts "\n\n=================RUN 2===================="
-    keywords = [['#ruby', '#marketing', '#anroid', '#growthhacking'],
-                ['#apps', '#android', '#ios', 'ruboto', '#indiedev', '#startup', '#startups'],
-                ['#cloud', '#analytics', '#itunes', '#googleplay', '#facebook', '#apple', '#tech'],
-                ['#social', "#idea"]]
+    keywords = [['#ruby', '#marketing', '#anroid'], ['#growthhacking', '#social', "#idea"],
+                ['#apps', '#android', '#ios', 'ruboto'], ['#indiedev', '#startup', '#startups'],
+                ['#cloud', '#analytics', '#itunes'], ['#googleplay', '#facebook', '#apple', '#tech'],
+                ["android", "ios", "#windows"]]
     keywords.shuffle.each do |keyword_set|
       lisa2.feast_on_keywords(keyword_set)
     end
   }
 
 end # End looper
+
 
 
