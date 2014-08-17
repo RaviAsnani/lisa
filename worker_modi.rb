@@ -3,7 +3,7 @@
 require "./lisa_the_birdie"
 
 
-#LisaToolbox.looper do 
+LisaToolbox.looper do 
 
   # Main execution starts here
   lisa = LisaTheBirdie.new({
@@ -28,4 +28,4 @@ require "./lisa_the_birdie"
     end
   }
 
-#end
+end

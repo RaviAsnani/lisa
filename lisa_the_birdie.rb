@@ -5,6 +5,8 @@
 require 'rubygems'
 require 'chatterbot/dsl'
 require 'parse-ruby-client'
+require "pp"
+
 
 
 # All utility methods which Lisa needs - but are not related to being a bird
@@ -179,6 +181,55 @@ end
 
 
 
+# Tries to walk through the friends graph
+class LisaPeopleBrowser
+  include LisaToolbox
+
+  def initialize(client = nil)
+    raise if client.nil? == true
+    @client = client  
+  end
+
+
+  # Returns all friends's usr ids of a given user id
+  # returns => [id1, id2, id3]
+  def find_all_friends_of(user_id)
+    friends = []
+    rate_limit(:LisaPeopleBrowser__find_all_friends_of) { 
+      friends = @client.friend_ids(user_id).to_h[:ids]
+    }
+    return friends
+  end
+
+
+  # user_nadles => ["makuchaku", "yobitchme", ...]
+  def find_all_friends_of_handles(user_handles=[])
+    all_friends = []
+    user_handles.each { |user_handle|
+      user_id = @client.user(user_handle).id
+      all_friends += find_all_friends_of(user_id)
+    }
+    return all_friends
+  end  
+
+
+  # # Find friends of a given user id => then find friends of each of those friends
+  # # Currently, works only at level 2
+  # # returns => [id1, id2, id3]
+  # def find_deeply_nested_friends_of(user_id)
+  #   all_friends = []
+  #   all_friends = find_all_friends_of(user_id)
+  #   all_friends.each { |friend|
+  #     all_friends += find_all_friends_of(friend)
+  #   }
+  #   return all_friends
+  # end
+
+end
+
+
+
+
 # A class which governs how Lisa responds to the user's incoming/outgoing personal communication
 class LisaTheChattyBird
   include LisaToolbox
@@ -203,19 +254,39 @@ class LisaTheChattyBird
     end
 
     @myself = @client.user.handle
+    @people_browser = LisaPeopleBrowser.new(@client)
   end
 
 
   # Execution actually starts here
   def start_chatting
-    setup_event_loop
+    setup_user_event_loop
+  end
+
+
+  def start_chatting_with_friends_of(user_handles=[])
+    friends = @people_browser.find_all_friends_of_handles(user_handles)
+    pp friends
+    puts "Length = #{friends.length}"
+    setup_friends_event_loop(friends)
   end
 
 
   private
 
 
-  def setup_event_loop
+  # Streaming events for friends of given users
+  def setup_friends_event_loop(friend_ids)
+    follow_filter = friend_ids.join(",")
+    @stream.filter({:follow => follow_filter}) {|object| 
+      puts "@#{object.user.handle} : #{object.text}" if object.is_a?(Twitter::Tweet)
+    }    
+  end
+
+
+
+  # Streaming events for myself
+  def setup_user_event_loop
 
     @stream.user do |object|
       case object
@@ -312,7 +383,7 @@ class LisaTheBirdie
   include LisaOnParse
   include LisaToolbox
 
-  attr_accessor :config, :bird_food, :bird_food_stats
+  attr_accessor :config, :bird_food_stats
 
   SLEEP_AFTER_ACTION = 60 # secs
   SLEEP_AFTER_SHOUTOUT = 60*10 # 15 mins
@@ -370,7 +441,6 @@ class LisaTheBirdie
 
     no_update
 
-    @bird_food = []
     @bird_food_stats = {
       :starrable => 0,
       :clonable => 0,
@@ -488,12 +558,46 @@ class LisaTheBirdie
 
 
 
+  # Returns the tweet if it's of the vested interest
+  def process_tweet_for_any_interest(tweet, operations)
+    bird_food = []
+    if is_tweet_of_basic_interest?(tweet) == true
+      rate_limit(:search_tweets__process_tweet_for_any_interest) {
+        if operations[:starrable] == true and is_starrable?(tweet) == true
+          bird_food << BirdFood.new(tweet, :star) 
+          @bird_food_stats[:starrable] += 1
+        end
+
+        if operations[:retweetable] == true and is_retweetable?(tweet) == true
+          bird_food << BirdFood.new(tweet, :retweet) 
+          @bird_food_stats[:retweetable] += 1
+        end
+
+        if operations[:clonable] == true and is_clonable?(tweet) == true
+          bird_food << BirdFood.new(tweet, :clone) 
+          @bird_food_stats[:clonable] += 1
+        end
+
+        if operations[:followable] == true and is_followable?(tweet.user) == true
+          bird_food << BirdFood.new(tweet.user, :follow) 
+          @bird_food_stats[:followable] += 1
+        end
+      } # rate limit
+    end    
+
+    return bird_food
+  end
+
+
+
+
   private
 
 
   # Search based on an array of given keywords
   # operations => {:starrable => true, :retweetable => true, :clonable => true, :followable => true}
   def search_tweets(keywords, operations)
+    all_bird_food = []
     search_text = keywords.length > 1 ? keywords.join(" OR ") : keywords.first
     puts "\n======================================================"
     puts "Searching for #{search_text}"
@@ -503,35 +607,13 @@ class LisaTheBirdie
       search(search_text, :lang => @config[:lang]) do |tweet| 
         original_search_count += 1
         #puts stringify(tweet, :tweet)
-        if is_tweet_of_basic_interest?(tweet) == true
-          rate_limit(:search_tweets) {
-            if operations[:starrable] == true and is_starrable?(tweet) == true
-              @bird_food << BirdFood.new(tweet, :star) 
-              @bird_food_stats[:starrable] += 1
-            end
-
-            if operations[:retweetable] == true and is_retweetable?(tweet) == true
-              @bird_food << BirdFood.new(tweet, :retweet) 
-              @bird_food_stats[:retweetable] += 1
-            end
-
-            if operations[:clonable] == true and is_clonable?(tweet) == true
-              @bird_food << BirdFood.new(tweet, :clone) 
-              @bird_food_stats[:clonable] += 1
-            end
-
-            if operations[:followable] == true and is_followable?(tweet.user) == true
-              @bird_food << BirdFood.new(tweet.user, :follow) 
-              @bird_food_stats[:followable] += 1
-            end
-          } # rate limit
-        end
+        all_bird_food += process_tweet_for_any_interest(tweet, operations)
       end
     }
 
-    puts "\nOriginal search count : #{original_search_count}, infestable : #{@bird_food.length}"
+    puts "\nOriginal search count : #{original_search_count}, infestable : #{all_bird_food.length}"
     puts @bird_food_stats.to_json
-    return @bird_food.shuffle!
+    return all_bird_food.shuffle!
   end  
 
 
