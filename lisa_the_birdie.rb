@@ -203,7 +203,11 @@ class LisaTheChattyBird
     end
 
     @myself = @client.user.handle
+  end
 
+
+  # Execution actually starts here
+  def start_chatting
     setup_event_loop
   end
 

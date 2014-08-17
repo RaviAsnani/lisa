@@ -12,3 +12,5 @@ lisa = LisaTheChattyBird.new({
       :secret => 'Qw8AQGMR1K2HAWfZ6GkACLOG66I6UdVIYF9iQcdHUQKgA'
     }
   })
+
+lisa.start_chatting
