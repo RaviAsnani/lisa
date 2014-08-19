@@ -126,7 +126,7 @@ module LisaToolbox
   end
 
   def check_hit?(klass, data)
-    print "?"
+    print "."
     command = "grep '#{data}' #{klass.to_s}.txt 1>/dev/null"
     return system(command)
   end
@@ -279,7 +279,9 @@ class LisaTheChattyBird
   def setup_friends_event_loop(friend_ids)
     follow_filter = friend_ids.join(",")
     @stream.filter({:follow => follow_filter}) {|object| 
-      puts "@#{object.user.handle} : #{object.text}" if object.is_a?(Twitter::Tweet)
+      if object.is_a?(Twitter::Tweet) and friend_ids.index(object.user.id) != nil
+        puts "@#{object.user.handle} : #{object.text}" 
+      end
     }    
   end
 
@@ -475,6 +477,8 @@ class LisaTheBirdie
 
   # NOTE - Actually does the stars
   def star(tweet)
+    return false if check_hit?(:tweet_infested, tweet.id) == true
+
     log("Starring tweet (id=>#{tweet.id}) : [#{tweet.user.handle}] : #{tweet.text}")
     rate_limit(:star) { client.favorite(tweet.id) }
     save(PARSE_KLASS, 
@@ -486,6 +490,8 @@ class LisaTheBirdie
 
   # NOTE - Actually does the retweet
   def retweet(tweet)
+    return false if check_hit?(:tweet_infested, tweet.id) == true
+
     log("Retweeting tweet (id=>#{tweet.id}) : [#{tweet.user.handle}] : #{tweet.text}")
     rate_limit(:retweet) { client.retweet(tweet.id) }
     record_hit(:tweet_infested, tweet.id)
@@ -495,8 +501,12 @@ class LisaTheBirdie
 
   # NOTE - Actually does the clone
   def clone(tweet)
-    log("Cloning tweet (id=>#{tweet.id}) : [#{tweet.user.handle}] : #{tweet.text}")
-    rate_limit(:clone) { client.update(tweet.text) }
+    return false if check_hit?(:tweet_infested, tweet.id) == true
+
+    clone_text = "#{tweet.text} via .@#{tweet.user.handle}"
+
+    log("Cloning tweet (id=>#{tweet.id}) : [#{tweet.user.handle}] : #{clone_text}")
+    rate_limit(:clone) { client.update(clone_text) }
     record_hit(:tweet_infested, tweet.id)
     random_sleep(SLEEP_AFTER_ACTION, 1, SLEEP_AFTER_ACTION)
   end    
@@ -559,10 +569,13 @@ class LisaTheBirdie
 
 
   # Returns the tweet if it's of the vested interest
+  # Order of interest => (star > retweetable > clonable) || followable
   def process_tweet_for_any_interest(tweet, operations)
     bird_food = []
     if is_tweet_of_basic_interest?(tweet) == true
       rate_limit(:search_tweets__process_tweet_for_any_interest) {
+        # The order of checks govern the needed order
+        # Tweet once processed, will never be processed again
         if operations[:starrable] == true and is_starrable?(tweet) == true
           bird_food << BirdFood.new(tweet, :star) 
           @bird_food_stats[:starrable] += 1
@@ -621,7 +634,9 @@ class LisaTheBirdie
 
   # TODO - relook into this
   def setup_exclusions(custom_exclude_list = [])
-    default_exclusion = ["money", "spammer", "junk", "spam", "fuck", "pussy", "ass", "shit", "piss", "cunt", "mofo", "cock", "tits", "wife", "sex", "porn"]
+    default_exclusion = ["money", "spammer", "junk", "spam", "fuck", "pussy", "ass", 
+                          "shit", "piss", "cunt", "mofo", "cock", "tits", "wife", "sex", "porn",
+                          "my", "thanks", "I "]
     exclude(default_exclusion + custom_exclude_list)
   end
 
@@ -643,9 +658,8 @@ class LisaTheBirdie
 
   # If tweet is worthy of a star
   def is_starrable?(tweet)
-    # Not a reply, High star count
-    if tweet.favorite_count >= @config[:tweet][:high_star_count] \
-          and tweet.reply? == false
+    # Min star count
+    if tweet.favorite_count >= @config[:tweet][:min_star_count]
       return true
     end
     return false

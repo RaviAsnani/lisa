@@ -17,12 +17,15 @@ LisaToolbox.looper do
         :application_id => "66USFL6hbkAMk2woXbM7YfEfYL3VdkJGqkcKZ4a1",
         :api_key => "yRyk5sz5sqktraKUGnrQCuEwf4hMAxuTF1uKrvXz" 
       },
-      :exclude => ["modi_fan007"]
+      :exclude => ["all_things_modi"]
     })
 
   lisa.rate_limit(:looper_internal) {
     puts "\n\n=================RUN 2===================="
-    keywords = [["BJP", "narendra", "modi", "narendramodi"]]
+    keywords = [["BJP", "narendra"], ["modi", "narendramodi"], ["indian politics"], 
+                ["arunjaitley", "SushmaSwaraj"], ["AtalBajpeyi", "AmitShahOffice"], 
+                ["naqvimukhtar", "SushilModi"], ["drharshvardhan", "smritiirani"],
+                ["varungandhi80", "ShahnawazBJP"]]
     keywords.shuffle.each do |keyword_set|
       lisa.feast_on_keywords(keyword_set)
     end
