@@ -59,7 +59,8 @@ LisaToolbox.looper do
         :application_id => "ZkdRD4LbeKFxkaviTOmOY29eQ6VaPNV4h96N4qXV",
         :api_key => "yVnIz9AoDA3XlZPEMlG7tR9icMdcimm6Cvdxlush" 
       },
-      :exclude => ["yobitchme", "Easy_Branches", "RachelMajor2000", "gamedev", "indiedev"],
+      :exclude => ["yobitchme", "Easy_Branches", "RachelMajor2000", 
+                    "gamedev", "indiedev", "Audiograbber", "buy", "deal"],
       :lang => "en", 
       :tweet => {
         :min_retweet_count => 1, 
