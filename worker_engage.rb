@@ -90,8 +90,8 @@ LisaToolbox.looper do
                 ['#googleplay', '#facebook', '#apple', '#tech'],
                 ["android", "ios", "#windows"], 
                 ["techcrunch", "ycombinator", "wpcentral"], 
-                ["androidandme", "androidcentral", "droid_life"], 
-                ["androidpolice", "Phandroid", "androidtapp"]
+                ["androidandme", "androidcentral", "Phandroid"], 
+                ["funding", "invest"]
                ]
     keywords.shuffle.each do |keyword_set|
       lisa2.feast_on_keywords(keyword_set)

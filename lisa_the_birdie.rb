@@ -125,10 +125,12 @@ module LisaToolbox
     system("echo '#{data}' >> #{klass.to_s}.txt")
   end
 
-  def check_hit?(klass, data)
+  def check_hit?(klass, data, verbosity=:silent)
     print "."
     command = "grep '#{data}' #{klass.to_s}.txt 1>/dev/null"
-    return system(command)
+    result = system(command)
+    puts "check_hit? was #{result} for #{klass}" if verbosity == :verbose
+    return result
   end
 
 end
@@ -258,13 +260,15 @@ class LisaTheChattyBird
   end
 
 
-  # Execution actually starts here
+  # Monitors realtime conversation of the current user
   def start_chatting
     setup_user_event_loop
   end
 
 
+  # Monitors realtime conversation of friends of X,y,z users
   def start_chatting_with_friends_of(user_handles=[])
+    puts "Finding who #{user_handles} follows..."
     friends = @people_browser.find_all_friends_of_handles(user_handles)
     pp friends
     puts "Length = #{friends.length}"
@@ -279,9 +283,7 @@ class LisaTheChattyBird
   def setup_friends_event_loop(friend_ids)
     follow_filter = friend_ids.join(",")
     @stream.filter({:follow => follow_filter}) {|object| 
-      if object.is_a?(Twitter::Tweet) and friend_ids.index(object.user.id) != nil
-        puts "@#{object.user.handle} : #{object.text}" 
-      end
+      common_event_loop(object, :general, {:friend_ids => friend_ids})
     }    
   end
 
@@ -289,41 +291,63 @@ class LisaTheChattyBird
 
   # Streaming events for myself
   def setup_user_event_loop
-
     @stream.user do |object|
-      case object
-        when Twitter::Tweet
-          on_timeline_tweet(object)
-        when Twitter::DirectMessage
-          on_dm(object)
-        when Twitter::Streaming::Event
+      common_event_loop(object, :user)
+    end  # stream
+  end
+
+
+  # mode => :user || :general
+  def common_event_loop(object, mode, data = {})
+    case object
+      when Twitter::Tweet
+        on_user_timeline_tweet(object) if mode == :user
+        on_general_tweet(object, data[:friend_ids]) if mode == :general
+      when Twitter::DirectMessage
+        on_user_dm(object)  if mode == :user
+      when Twitter::Streaming::Event
+        if(mode == :user)
           #puts object.name, object.name.class
           case object.name
             when :list_member_added
-              on_list_member_added(object.source, object.target, object.target_object)
+              on_user_list_member_added(object.source, object.target, object.target_object)
             when :favorite
-              on_star(object.source, object.target, object.target_object)
+              on_user_star(object.source, object.target, object.target_object)
             when :follow
-              on_follow(object.source, object.target)
+              on_user_follow(object.source, object.target)
             when :unfollow
               puts "Unfollow from #{object.target.handle}"
           end
-        when Twitter::Streaming::FriendList
-          ;
-        when Twitter::Streaming::StallWarning
-          on_stall_warning
-        else
-          #puts object.id if object.class == Twitter::Streaming::DeletedTweet
-          puts object, object.id, object.user_id
-      end # case
-    end   # stream
+        end # mode=:user
+      when Twitter::Streaming::FriendList
+        ;
+      when Twitter::Streaming::StallWarning
+        on_user_stall_warning(mode)
+      else
+        #puts object.id if object.class == Twitter::Streaming::DeletedTweet
+        puts object, object.id, object.user_id
+    end # case
+  end
+
+
+  # When a tweet is received if mode==:general
+  def on_general_tweet(object, friend_ids)
+    print "."
+    if object.is_a?(Twitter::Tweet) and friend_ids.index(object.user.id) != nil
+      prefix = "[ST:#{object.favorite_count}, RT:#{object.retweet_count}, urls?:#{object.urls?}, media?:#{object.media?}, @M?:#{object.user_mentions?}] : [@#{object.user.id}:#{object.user.handle}]"
+      puts "\n=> #{prefix} => #{object.text}" 
+      if object.urls? == true and object.user_mentions? == false
+        record_hit(:setup_friends_event_loop, "#{prefix} => #{object.text}")
+      end
+    end      
 
   end
 
 
+
   # On a star
   # Follow the source user if target is self
-  def on_star(source, target, tweet)
+  def on_user_star(source, target, tweet)
     puts "--------------------------------------on_star--------------------------------------------"
     log("Got starred (source : #{source.handle}, target : #{target.handle}) : #{tweet.text}")
     log("#{target.handle} follows #{source.handle} ? : #{client.user(source.handle).following?}")  
@@ -336,14 +360,14 @@ class LisaTheChattyBird
 
 
   # When a user is added to a list
-  def on_list_member_added(source, target, list)
+  def on_user_list_member_added(source, target, list)
     log("Got new addition to list : #{target.handle}")
   end
 
 
   # On a follow
   # This event is invoked on all possible follow events - either to me or from me
-  def on_follow(source, target)
+  def on_user_follow(source, target)
     return if target.handle != @myself
 
     log("Follow event from #{source.handle}")
@@ -360,19 +384,19 @@ class LisaTheChattyBird
 
   # On a DM
   # This event is invoked on all possible follow events - either to me or from me
-  def on_dm(message)
+  def on_user_dm(message)
     log("DM : #{message.text}")
   end
 
 
   # On twitter's stall warning
-  def on_stall_warning
-    log("Stall warning from Twiiter")
+  def on_user_stall_warning(mode)
+    log("Streaming stall warning from Twiiter, mode => #{mode}")
   end
 
 
   # On a new timeline tweet
-  def on_timeline_tweet(tweet)
+  def on_user_timeline_tweet(tweet)
   end
 
 end
@@ -390,7 +414,6 @@ class LisaTheBirdie
   SLEEP_AFTER_ACTION = 60 # secs
   SLEEP_AFTER_SHOUTOUT = 60*10 # 15 mins
   APP_URL = "http://j.mp/yo_bitch"
-  PARSE_KLASS = "People"
 
 
   class BirdFood < Struct.new(:stuff, :operation)
@@ -452,6 +475,9 @@ class LisaTheBirdie
 
     setup_exclusions(@config[:exclude])
 
+    @myself = client.user.handle
+    @parse_klass = "People" + "_#{@myself}" 
+
     Parse.init :application_id => config[:parse][:application_id],
                :api_key        => config[:parse][:api_key]     
   end
@@ -477,11 +503,11 @@ class LisaTheBirdie
 
   # NOTE - Actually does the stars
   def star(tweet)
-    return false if check_hit?(:tweet_infested, tweet.id) == true
+    return false if check_hit?(:tweet_infested, tweet.id, :verbose) == true
 
     log("Starring tweet (id=>#{tweet.id}) : [#{tweet.user.handle}] : #{tweet.text}")
     rate_limit(:star) { client.favorite(tweet.id) }
-    save(PARSE_KLASS, 
+    save(@parse_klass, 
           {:handle => tweet.user.handle, :mentioned => false, :followed => false, :starred => true})
     record_hit(:tweet_infested, tweet.id)
     random_sleep(SLEEP_AFTER_ACTION, 1, SLEEP_AFTER_ACTION)
@@ -490,7 +516,7 @@ class LisaTheBirdie
 
   # NOTE - Actually does the retweet
   def retweet(tweet)
-    return false if check_hit?(:tweet_infested, tweet.id) == true
+    return false if check_hit?(:tweet_infested, tweet.id, :verbose) == true
 
     log("Retweeting tweet (id=>#{tweet.id}) : [#{tweet.user.handle}] : #{tweet.text}")
     rate_limit(:retweet) { client.retweet(tweet.id) }
@@ -501,14 +527,14 @@ class LisaTheBirdie
 
   # NOTE - Actually does the clone
   def clone(tweet)
-    return false if check_hit?(:tweet_infested, tweet.id) == true
+    return false if check_hit?(:tweet_infested, tweet.id, :verbose) == true
 
     clone_text = "#{tweet.text} via .@#{tweet.user.handle}"
 
     log("Cloning tweet (id=>#{tweet.id}) : [#{tweet.user.handle}] : #{clone_text}")
     rate_limit(:clone) { client.update(clone_text) }
     record_hit(:tweet_infested, tweet.id)
-    random_sleep(SLEEP_AFTER_ACTION, 1, SLEEP_AFTER_ACTION)
+    random_sleep(SLEEP_AFTER_ACTION, 1, SLEEP_AFTER_ACTION*2)
   end    
 
 
@@ -516,7 +542,7 @@ class LisaTheBirdie
   def follow(user, do_save = true)
     log("Following user : [#{user.handle}]")
     rate_limit(:follow) { client.follow(user.handle) }
-    save(PARSE_KLASS, 
+    save(@parse_klass, 
           {:handle => user.handle, :mentioned => false, :followed => true, :starred => false}) if do_save == true
     record_hit(:followed, user.handle)
     random_sleep(SLEEP_AFTER_ACTION, 1, SLEEP_AFTER_ACTION)
@@ -541,7 +567,7 @@ class LisaTheBirdie
       "Bitching at friends made fun. __USER__ Try our Yo! B*tch android app : #{APP_URL}"
     ]
 
-    user = find(PARSE_KLASS, {
+    user = find(@parse_klass, {
                 :find_by_key => "mentioned", 
                 :find_by_value => false, 
                 :order_by_key => "createdAt", 
@@ -560,7 +586,7 @@ class LisaTheBirdie
       Time.now.to_i % 3 == 0 ? client.update_with_media(tweet, File.new(media)) : client.update(tweet)
       random_sleep(SLEEP_AFTER_ACTION, 2)
       follow(client.user(user["handle"]), false)
-      save(PARSE_KLASS, {:mentioned => true, :followed => true, :handle => user["handle"]})
+      save(@parse_klass, {:mentioned => true, :followed => true, :handle => user["handle"]})
     }
 
     random_sleep(SLEEP_AFTER_SHOUTOUT, 1, SLEEP_AFTER_SHOUTOUT)
@@ -636,7 +662,7 @@ class LisaTheBirdie
   def setup_exclusions(custom_exclude_list = [])
     default_exclusion = ["money", "spammer", "junk", "spam", "fuck", "pussy", "ass", 
                           "shit", "piss", "cunt", "mofo", "cock", "tits", "wife", "sex", "porn",
-                          "my", "thanks", "I "]
+                          "my", "thanks", "I ", "gun", "wound", "I'm", "I am"]
     exclude(default_exclusion + custom_exclude_list)
   end
 
