@@ -6,6 +6,13 @@ require 'rubygems'
 require 'chatterbot/dsl'
 require 'parse-ruby-client'
 require "pp"
+require "google-search"
+require "cgi" # for unescaping html entities
+
+
+# Holds tweets & users of interest
+class BirdFood < Struct.new(:stuff, :operation)
+end
 
 
 
@@ -66,14 +73,14 @@ module LisaToolbox
   # Runs the given block of code in a new thread
   def self.run_in_new_thread(name, &block)
     puts "################################################################"
-    puts "Starting Thread #{name} at #{Time.now}"
+    puts "Pre Thread #{name} at #{Time.now}"
 
     # Don't wait for it to finish
     Thread.start do
       block.call
     end
 
-    puts "Ending Thread #{name} at #{Time.now}"
+    puts "Post Thread #{name} at #{Time.now}"
     puts "################################################################"    
   end
 
@@ -96,8 +103,14 @@ module LisaToolbox
 
 
   # Generic logging
-  def log(message)
-    puts "=> [#{Time.now.to_s.split(" ")[0..1].join(" ")}] #{message}"
+  def log(object, prefix="")
+    timestamp = Time.now.to_s.split(" ")[0..1].join(" ")
+    if object.is_a?(Twitter::Tweet)
+      pre = "[#{prefix}] [#{timestamp}] [ST:#{object.favorite_count}, RT:#{object.retweet_count}, urls?:#{object.urls?}, media?:#{object.media?}, @M?:#{object.user_mentions?}] : [@#{object.user.id}:#{object.user.handle}]"
+      puts "\n=> #{pre} => #{object.text}" 
+    else
+      puts "\n=> [#{timestamp}] #{object}"
+    end
   end
 
 
@@ -236,7 +249,7 @@ end
 class LisaTheChattyBird
   include LisaToolbox
 
-  attr_accessor :stream, :client, :myself
+  attr_accessor :stream, :client, :myself, :live_tweets
 
   # config is the same config object which is received by LisaTheBirdie
   def initialize(config_params)
@@ -257,6 +270,13 @@ class LisaTheChattyBird
 
     @myself = @client.user.handle
     @people_browser = LisaPeopleBrowser.new(@client)
+
+    config_params[:parse] = {
+                              :application_id => "ZkdRD4LbeKFxkaviTOmOY29eQ6VaPNV4h96N4qXV",
+                              :api_key => "yVnIz9AoDA3XlZPEMlG7tR9icMdcimm6Cvdxlush" 
+                            }   
+    @lisa = LisaTheBirdie.new(config_params)   
+    @live_tweets = []                         
   end
 
 
@@ -270,8 +290,8 @@ class LisaTheChattyBird
   def start_chatting_with_friends_of(user_handles=[])
     puts "Finding who #{user_handles} follows..."
     friends = @people_browser.find_all_friends_of_handles(user_handles)
-    pp friends
-    puts "Length = #{friends.length}"
+    puts "Total people #{user_handles} follows = #{friends.length}"
+    start_delayed_tweet_processor
     setup_friends_event_loop(friends)
   end
 
@@ -334,13 +354,44 @@ class LisaTheChattyBird
   def on_general_tweet(object, friend_ids)
     print "."
     if object.is_a?(Twitter::Tweet) and friend_ids.index(object.user.id) != nil
-      prefix = "[ST:#{object.favorite_count}, RT:#{object.retweet_count}, urls?:#{object.urls?}, media?:#{object.media?}, @M?:#{object.user_mentions?}] : [@#{object.user.id}:#{object.user.handle}]"
-      puts "\n=> #{prefix} => #{object.text}" 
-      if object.urls? == true and object.user_mentions? == false
-        record_hit(:setup_friends_event_loop, "#{prefix} => #{object.text}")
-      end
+      process_live_tweet(object)
     end      
+  end
 
+
+
+
+  # Push the live tweets into an queue for later processing
+  def process_live_tweet(tweet)
+    if @lisa.is_tweet_of_basic_interest?(tweet, :live) == true
+      #log(tweet)
+      @live_tweets << BirdFood.new(tweet, :clone)  if @lisa.is_clonable?(tweet, :live) == true
+      @live_tweets << BirdFood.new(tweet, :retweet)  if @lisa.is_retweetable?(tweet, :live) == true
+      @live_tweets << BirdFood.new(tweet, :star)  if @lisa.is_starrable?(tweet, :live) == true
+      @live_tweets << BirdFood.new(tweet.user, :follow)  if @lisa.is_followable?(tweet.user, :live) == true
+      print "Q"
+    end #if
+  end
+
+
+
+  # Start queue processing
+  def start_delayed_tweet_processor
+    LisaToolbox.run_in_new_thread(:delayed_tweet_processor) {
+      while true
+        food_item = @live_tweets.shift
+        # Sleep if there is nothing in the queue. Execute it otherwise
+        if food_item.nil?
+          random_sleep
+        else
+          if food_item.operation == :follow
+            @lisa.send(food_item.operation, food_item.stuff, true, :preview)
+          else
+            @lisa.send(food_item.operation, food_item.stuff, :preview)
+          end
+        end
+      end
+    }
   end
 
 
@@ -414,11 +465,6 @@ class LisaTheBirdie
   SLEEP_AFTER_ACTION = 60 # secs
   SLEEP_AFTER_SHOUTOUT = 60*10 # 15 mins
   APP_URL = "http://j.mp/yo_bitch"
-
-
-  class BirdFood < Struct.new(:stuff, :operation)
-  end
-
 
 
   def initialize(config = {})
@@ -502,49 +548,68 @@ class LisaTheBirdie
 
 
   # NOTE - Actually does the stars
-  def star(tweet)
+  def star(tweet, mode = :real)
     return false if check_hit?(:tweet_infested, tweet.id, :verbose) == true
 
-    log("Starring tweet (id=>#{tweet.id}) : [#{tweet.user.handle}] : #{tweet.text}")
-    rate_limit(:star) { client.favorite(tweet.id) }
+    #log("Starring tweet (id=>#{tweet.id}) : [#{tweet.user.handle}] : #{tweet.text}")
+    log(tweet, "STAR")
+    return if mode == :preview
+
     save(@parse_klass, 
           {:handle => tweet.user.handle, :mentioned => false, :followed => false, :starred => true})
     record_hit(:tweet_infested, tweet.id)
+
+    rate_limit(:star) { client.favorite(tweet.id) }
     random_sleep(SLEEP_AFTER_ACTION, 1, SLEEP_AFTER_ACTION)
   end
+
 
 
   # NOTE - Actually does the retweet
-  def retweet(tweet)
+  def retweet(tweet, mode = :real)
     return false if check_hit?(:tweet_infested, tweet.id, :verbose) == true
 
-    log("Retweeting tweet (id=>#{tweet.id}) : [#{tweet.user.handle}] : #{tweet.text}")
-    rate_limit(:retweet) { client.retweet(tweet.id) }
+    #log("Retweeting tweet (id=>#{tweet.id}) : [#{tweet.user.handle}] : #{tweet.text}")
+    log(tweet, "RETWEET")
+    return if mode == :preview
+
     record_hit(:tweet_infested, tweet.id)
+
+    rate_limit(:retweet) { client.retweet(tweet.id) }
     random_sleep(SLEEP_AFTER_ACTION, 1, SLEEP_AFTER_ACTION)
   end
 
 
+
   # NOTE - Actually does the clone
-  def clone(tweet)
+  def clone(tweet, mode = :real)
     return false if check_hit?(:tweet_infested, tweet.id, :verbose) == true
 
     clone_text = "#{tweet.text} via .@#{tweet.user.handle}"
+    
+    #log("Cloning tweet (id=>#{tweet.id}) : [#{tweet.user.handle}] : #{clone_text}")
+    log(tweet, "CLONE")
+    return if mode == :preview
 
-    log("Cloning tweet (id=>#{tweet.id}) : [#{tweet.user.handle}] : #{clone_text}")
-    rate_limit(:clone) { client.update(clone_text) }
     record_hit(:tweet_infested, tweet.id)
+
+    rate_limit(:clone) { client.update(clone_text) }
     random_sleep(SLEEP_AFTER_ACTION, 1, SLEEP_AFTER_ACTION*2)
   end    
 
 
+
   # NOTE - Actually does the follow
-  def follow(user, do_save = true)
+  def follow(user, do_save = true, mode = :real)
+    log("mode=#{mode}", "FOLLOW")
     log("Following user : [#{user.handle}]")
-    rate_limit(:follow) { client.follow(user.handle) }
+    return if mode == :preview
+
     save(@parse_klass, 
           {:handle => user.handle, :mentioned => false, :followed => true, :starred => false}) if do_save == true
     record_hit(:followed, user.handle)
+
+    rate_limit(:follow) { client.follow(user.handle) }
     random_sleep(SLEEP_AFTER_ACTION, 1, SLEEP_AFTER_ACTION)
   end
 
@@ -629,10 +694,6 @@ class LisaTheBirdie
 
 
 
-
-  private
-
-
   # Search based on an array of given keywords
   # operations => {:starrable => true, :retweetable => true, :clonable => true, :followable => true}
   def search_tweets(keywords, operations)
@@ -645,7 +706,7 @@ class LisaTheBirdie
     rate_limit(:search) {
       search(search_text, :lang => @config[:lang]) do |tweet| 
         original_search_count += 1
-        #puts stringify(tweet, :tweet)
+        #log(tweet, "TWEET")
         all_bird_food += process_tweet_for_any_interest(tweet, operations)
       end
     }
@@ -670,55 +731,130 @@ class LisaTheBirdie
 
   # Figure out which tweet to infest on
   # TODO - how do we check if this is not a dup interaction on the user?
-  def is_tweet_of_basic_interest?(tweet)
+  # mode => :search || :live
+  def is_tweet_of_basic_interest?(tweet, mode = :search)
     # Don't process the tweet if we have already infested it before
     return false if check_hit?(:tweet_infested, tweet.id) == true
 
     score = 0
-    score += 1 if tweet.retweet_count >= @config[:tweet][:min_retweet_count] 
-    score += 1 if tweet.favorite_count >= @config[:tweet][:min_star_count] 
+    if mode == :search
+      score += 1 if tweet.retweet_count >= @config[:tweet][:min_retweet_count] 
+      score += 1 if tweet.favorite_count >= @config[:tweet][:min_star_count] 
+      return score > 1 ? true : false
+    end
 
-    return score > 1 ? true : false
+    # Only if the tweet has a url AND (is either a via tweet or is not a mention)
+    if mode == :live
+      if tweet.urls? == true # and is_no_mention_or_via_mention_tweet?(tweet) == true
+        return true
+      end
+    end
+
+    # default
+    return false
   end  
 
 
+  # Is the tweet like "<foo_text> {via||by} @zoo_user"
+  def is_no_mention_or_via_mention_tweet?(tweet)
+    return true if tweet.user_mentions? == false
+
+    text = tweet.text.downcase
+    via_pos = text.index(" via ") || text.index(" by ") || 10000
+
+    return true if via_pos < (text.index(" @") || 10001)
+    return false # default
+  end
+
+
+
+  # Create enough randomness so that every tweet should not become infestable
+  def is_randomly_infestable_tweet?(tweet, divide_by = 2)
+    return tweet.id % divide_by == 0 ? true : false
+  end
+
+
+
   # If tweet is worthy of a star
-  def is_starrable?(tweet)
-    # Min star count
-    if tweet.favorite_count >= @config[:tweet][:min_star_count]
-      return true
+  # mode => :search || :live
+  def is_starrable?(tweet, mode = :search)
+    if mode == :search
+      # Min star count
+      if tweet.favorite_count >= @config[:tweet][:min_star_count]
+        return true
+      end
     end
+
+    if mode == :live
+      # Should not be a mention
+      if tweet.user_mentions? == false \
+          and is_randomly_infestable_tweet?(tweet) == true
+        return true
+      end
+    end      
+  
+    # default
     return false
   end
 
 
   # If tweet is worthy of being retweeted
-  def is_retweetable?(tweet)
-    # Not a reply, High retweet count, moderate star count
-    if ((tweet.favorite_count >= @config[:tweet][:moderate_star_count] \
-              and tweet.retweet_count >= @config[:tweet][:high_retweet_count]  \
-              and tweet.reply? == false)) \
-          or (is_followable?(tweet.user) == true)
-      return true
+  # mode => :search || :live
+  def is_retweetable?(tweet, mode = :search)
+    if mode == :search
+      # Not a reply, High retweet count, moderate star count
+      if ((tweet.favorite_count >= @config[:tweet][:moderate_star_count] \
+                and tweet.retweet_count >= @config[:tweet][:high_retweet_count]  \
+                and tweet.reply? == false)) \
+            or (is_followable?(tweet.user) == true)
+        return true
+      end
     end
+
+    if mode == :live
+      # Should have media
+      # Should not have user mentions
+      if tweet.media? == true \
+          and tweet.user_mentions? == false \
+          and is_randomly_infestable_tweet?(tweet) == true
+        return true
+      end
+    end    
+
+    # default
     return false
   end
 
 
   # If tweet is worthy of being clonable (copy=>paste basically)
-  def is_clonable?(tweet)
-    # Not a reply, Min star count, High retweet count
-    if (tweet.favorite_count >= @config[:tweet][:min_star_count] \
-          and tweet.retweet_count >= @config[:tweet][:moderate_retweet_count]  \
-          and tweet.reply? == false)
-      return true
+  # mode => :search || :live
+  def is_clonable?(tweet, mode = :search)
+    if mode == :search
+      # Not a reply, Min star count, High retweet count
+      if (tweet.favorite_count >= @config[:tweet][:min_star_count] \
+            and tweet.retweet_count >= @config[:tweet][:moderate_retweet_count]  \
+            and tweet.reply? == false)
+        return true
+      end
     end
+
+    if mode == :live
+      # Should have media
+      # Should be either no mention or a via mention
+      if tweet.media? == true \
+          and is_no_mention_or_via_mention_tweet?(tweet) == true \
+          and is_randomly_infestable_tweet?(tweet) == true
+        return true
+      end
+    end
+
+    # default
     return false
   end
 
 
   # If the user who tweeted the tweet is followable
-  def is_followable?(user)
+  def is_followable?(user, mode = :live)
     return false if user.following? == true
 
     # Friend to following ratio, stars, tweet count, min followers, since on twitter
@@ -748,6 +884,52 @@ class LisaTheBirdie
     return false
   end
 
+
+end
+
+
+
+
+# Class which generates real high quality tweets
+class LisaTheEliteTweetMaker
+  include LisaToolbox
+
+  # config => {:handle => "makuchaku"}
+  def initialize(config = nil)
+    @config = config
+    raise if @config.nil?
+
+    @myself = @config[:handle]
+  end
+
+
+  def make_elite_tweet(search_query)
+    elite_tweet = find_news(search_query)
+    tweet_text = "#{CGI.unescapeHTML(elite_tweet[:item].title)} #{elite_tweet[:item].uri}"
+    puts tweet_text, elite_tweet[:media]
+  end
+
+
+  private
+
+
+  # For a given search query, returns the first unique news item
+  def find_news(search_query)
+    klass = "lisaTheEliteTweeter_#{@myself}"
+    Google::Search::News.new(:query => search_query).each { |item|
+      if check_hit?(klass, item.uri) == false
+        record_hit(klass, item.uri)
+        return {:item => item, :media => find_media(item.title)} 
+      end
+    }
+  end
+
+
+  # For a given tweet title, returns the first available google image 
+  def find_media(tweet_text)
+    media = Google::Search::Image.new(:query => tweet_text).first
+    return media.width < 200 ? nil : media.uri
+  end
 
 end
 

@@ -3,7 +3,7 @@
 require "./lisa_the_birdie"
 
 
-LisaToolbox.looper do 
+#LisaToolbox.looper do 
 
   # # Main execution starts here
   # lisa1 = LisaTheBirdie.new({
@@ -50,10 +50,10 @@ LisaToolbox.looper do
   # Main execution starts here
   lisa2 = LisaTheBirdie.new({
       :auth => {
-        :consumer_key => 'fl8Xb0Lv6CkKdbNAMGB8mBUrG',
-        :consumer_secret =>'mAtdDResuDJp9xwsInihXD5rcDpMEnJ4nMRtOGtcNSH0agbZ28',
-        :token =>'2592724712-o8gSOnGMuwUfaXcB1nGR1hrUIk9YkSDrBX108Fx',
-        :secret => 'Qw8AQGMR1K2HAWfZ6GkACLOG66I6UdVIYF9iQcdHUQKgA'
+        :consumer_key => '07y02Rx3pjpVlAqmwiLZeONBQ',
+        :consumer_secret =>'SFN4ennNrCRu8eL7piWRRvJrpupi8IV5dDcN3gnPcms97LlRAt',
+        :token =>'2592724712-sATvge1OdeqOd1zpE2riTKpiPaCmn0o3Jarnppe',
+        :secret => 'XtH5VQKXVURUDfQ0GPqxrcYO4wGMqdUcLnF26PP0YoVz0'
       },
       :parse => {
         :application_id => "ZkdRD4LbeKFxkaviTOmOY29eQ6VaPNV4h96N4qXV",
@@ -82,23 +82,23 @@ LisaToolbox.looper do
   lisa2.rate_limit(:looper_internal) {
     puts "\n\n=================RUN 2===================="
     keywords = [
-                # ['#ruby', '#marketing', '#anroid'], 
-                # ['#growthhacking', '#social', "#idea"],
-                # ['#apps', '#android', '#ios', 'ruboto'], 
-                # ['#indiedev', '#startup', '#startups'],
-                # ['#cloud', '#analytics', '#itunes'], 
-                ['#googleplay', '#facebook', '#apple', '#tech'],
-                ["android", "ios", "#windows"], 
-                ["techcrunch", "ycombinator", "wpcentral"], 
-                ["androidandme", "androidcentral", "Phandroid"], 
-                ["funding", "invest"]
+                 ['#ruby', '#marketing', '#anroid'], 
+                 ['#growthhacking', '#social', "#idea"],
+                 ['#apps', '#android', '#ios', 'ruboto'], 
+                 ['#startup', '#startups'],
+                 ['#cloud', '#analytics', '#itunes'], 
+                 ['#googleplay', '#facebook', '#apple', '#tech'],
+                 ["android", "ios", "#windows"], 
+                 ["ycombinator", "wpcentral"], 
+                 ["androidandme", "androidcentral"], 
+                 ["funding", "invest"]
                ]
     keywords.shuffle.each do |keyword_set|
       lisa2.feast_on_keywords(keyword_set)
     end
   }
 
-end # End looper
+#end # End looper
 
 
 

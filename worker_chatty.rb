@@ -14,4 +14,4 @@ lisa = LisaTheChattyBird.new({
   })
 
 #lisa.start_chatting
-lisa.start_chatting_with_friends_of(["CatherineShu"])
+lisa.start_chatting_with_friends_of(["recode"])
