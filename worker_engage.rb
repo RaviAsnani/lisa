@@ -60,7 +60,7 @@ require "./lisa_the_birdie"
         :api_key => "yVnIz9AoDA3XlZPEMlG7tR9icMdcimm6Cvdxlush" 
       },
       :exclude => ["yobitchme", "Easy_Branches", "RachelMajor2000", 
-                    "gamedev", "indiedev", "Audiograbber", "buy", "deal"],
+                    "gamedev", "indiedev", "Audiograbber", "buy", "deal", "biz"],
       :lang => "en", 
       :tweet => {
         :min_retweet_count => 1, 

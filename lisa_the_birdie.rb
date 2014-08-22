@@ -1,7 +1,3 @@
-# https://github.com/muffinista/chatterbot
-# http://rdoc.info/gems/twitter/Twitter/REST/Favorites#favorite-instance_method
-# https://dev.twitter.com/docs/api/1.1
-
 require 'rubygems'
 require 'chatterbot/dsl'
 require 'parse-ruby-client'
@@ -144,6 +140,13 @@ module LisaToolbox
     result = system(command)
     puts "check_hit? was #{result} for #{klass}" if verbosity == :verbose
     return result
+  end
+
+
+  # Download a web url to disk
+  def download_url(url, output_filename, dir_name = "media/tmp")
+    command = "wget --quiet '#{url}' -O '#{dir_name}/#{output_filename}'"
+    system(command)
   end
 
 end
@@ -469,6 +472,7 @@ class LisaTheBirdie
 
   def initialize(config = {})
     # Safety net
+    raise if config[:auth].nil? or config[:parse].nil?
     raise if config[:auth][:consumer_key].nil? or config[:auth][:consumer_secret].nil? or config[:auth][:token].nil? or config[:auth][:secret].nil?
     raise if config[:parse][:application_id].nil? or config[:parse][:api_key].nil?
 
@@ -595,7 +599,19 @@ class LisaTheBirdie
 
     rate_limit(:clone) { client.update(clone_text) }
     random_sleep(SLEEP_AFTER_ACTION, 1, SLEEP_AFTER_ACTION*2)
-  end    
+  end   
+
+
+
+  # NOTE - Actually does the tweet with given media file
+  # tweet => {:text => "text", :media_path => "/some/file/path"}
+  def tweet_with_media(tweet, mode = :real)
+    log(tweet, "tweet_with_media")
+    return if mode == :preview
+     
+    rate_limit(:tweet_with_media) { client.update_with_media(tweet[:text], File.new(tweet[:media_path])) }
+    random_sleep(SLEEP_AFTER_ACTION, 1, SLEEP_AFTER_ACTION*5)
+  end 
 
 
 
@@ -899,14 +915,45 @@ class LisaTheEliteTweetMaker
     @config = config
     raise if @config.nil?
 
-    @myself = @config[:handle]
+    @myself = @config[:myself]
+
+    @lisa = LisaTheBirdie.new(config)
   end
 
 
-  def make_elite_tweet(search_query)
+
+  # search_keyword_cloud => array of array of keywords
+  def make_elite_tweets_for_keyword_cloud(search_keyword_cloud)
+    search_keyword_cloud.shuffle.each { |search_keywords|
+      log("Finding an elite tweet for #{search_keywords}")
+      tweet = make_elite_tweet_for(search_keywords)
+      @lisa.tweet_with_media(tweet)
+    }
+  end
+
+
+
+  # Make an elite tweet loaded with url & a media
+  # search_query => array of keywords
+  # Each array is used for making one tweet
+  def make_elite_tweet_for(search_query)
+    base_media_path = "./media/tmp/"
     elite_tweet = find_news(search_query)
-    tweet_text = "#{CGI.unescapeHTML(elite_tweet[:item].title)} #{elite_tweet[:item].uri}"
-    puts tweet_text, elite_tweet[:media]
+
+    unescaped_tweet_text = add_hashtags(CGI.unescapeHTML(elite_tweet[:item].title), search_query)
+    tweet_text = "#{unescaped_tweet_text} #{elite_tweet[:item].uri}"
+    media_uri_md5 = nil
+
+    #puts tweet_text, elite_tweet[:media_uri]
+
+    tweet = {:text => tweet_text, :media_path => nil}
+    if not elite_tweet[:media_uri].nil?
+      media_uri_md5 = Digest::MD5.hexdigest(elite_tweet[:media_uri])
+      download_url(elite_tweet[:media_uri], media_uri_md5)
+      tweet[:media_path] = "#{base_media_path}#{media_uri_md5}"
+    end
+
+    return tweet
   end
 
 
@@ -916,10 +963,10 @@ class LisaTheEliteTweetMaker
   # For a given search query, returns the first unique news item
   def find_news(search_query)
     klass = "lisaTheEliteTweeter_#{@myself}"
-    Google::Search::News.new(:query => search_query).each { |item|
+    Google::Search::News.new(:query => search_query.join(" ")).each { |item|
       if check_hit?(klass, item.uri) == false
         record_hit(klass, item.uri)
-        return {:item => item, :media => find_media(item.title)} 
+        return {:item => item, :media_uri => find_media(item.title)} 
       end
     }
   end
@@ -929,6 +976,16 @@ class LisaTheEliteTweetMaker
   def find_media(tweet_text)
     media = Google::Search::Image.new(:query => tweet_text).first
     return media.width < 200 ? nil : media.uri
+  end
+
+
+
+  # Given a text, if search keywords exist in it, make the hashtags
+  def add_hashtags(text, search_keywords)
+    search_keywords.each { |keyword|
+      text.gsub!(/#{keyword}/i, "##{keyword}")
+    }
+    return text
   end
 
 end
