@@ -16,20 +16,20 @@ require "./lisa_the_birdie"
     },
     :myself => "yobitchme"
   })
-  tweet = elite_lisa.make_elite_tweets_for_keyword_cloud(
-            [
-              ['marketing', 'anroid'], 
-              ['growthhacking'],
-              ['social', "idea"],
-              ['app', 'android'], 
-              ['ios', 'itunes'], 
-              ['startup'],
-              ['cloud', 'analytics'], 
-              ['googleplay', 'tech'],
-              ['facebook', 'apple'],
-              ["windows", "mobile"], 
-              ["ycombinator"], 
-              ["funding", "invest"]
-            ]
-          )
+  elite_lisa.make_elite_tweets_for_keyword_cloud(
+      [
+        ['marketing', 'anroid'], 
+        ['growthhacking'],
+        ['social', "idea"],
+        ['app', 'android'], 
+        ['ios', 'itunes'], 
+        ['startup'],
+        ['cloud', 'analytics'], 
+        ['googleplay', 'tech'],
+        ['facebook', 'apple'],
+        ["windows", "mobile"], 
+        ["ycombinator"], 
+        ["funding", "invest"]
+      ]
+    )
 #end

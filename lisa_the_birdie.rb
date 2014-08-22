@@ -609,8 +609,10 @@ class LisaTheBirdie
     log(tweet, "tweet_with_media")
     return if mode == :preview
      
-    rate_limit(:tweet_with_media) { client.update_with_media(tweet[:text], File.new(tweet[:media_path])) }
-    random_sleep(SLEEP_AFTER_ACTION, 1, SLEEP_AFTER_ACTION*5)
+    rate_limit(:tweet_with_media) { 
+      tweet[:media_path].nil? ? client.update(tweet[:text]) : client.update_with_media(tweet[:text], File.new(tweet[:media_path])) 
+    }
+    random_sleep(SLEEP_AFTER_ACTION, 1, SLEEP_AFTER_ACTION*15)
   end 
 
 
@@ -940,8 +942,14 @@ class LisaTheEliteTweetMaker
     base_media_path = "./media/tmp/"
     elite_tweet = find_news(search_query)
 
+    # If news is not returning anything, sleep for enough time for a news item to be generated
+    if elite_tweet == nil
+      random_sleep(SLEEP_GENERIC, 1, SLEEP_GENERIC*10)
+      return
+    end
+
     unescaped_tweet_text = add_hashtags(CGI.unescapeHTML(elite_tweet[:item].title), search_query)
-    tweet_text = "#{unescaped_tweet_text} #{elite_tweet[:item].uri}"
+    tweet_text = "#{unescaped_tweet_text}  #{elite_tweet[:item].uri}"
     media_uri_md5 = nil
 
     #puts tweet_text, elite_tweet[:media_uri]
@@ -969,12 +977,15 @@ class LisaTheEliteTweetMaker
         return {:item => item, :media_uri => find_media(item.title)} 
       end
     }
+
+    return nil
   end
 
 
   # For a given tweet title, returns the first available google image 
   def find_media(tweet_text)
     media = Google::Search::Image.new(:query => tweet_text).first
+    return nil if media == nil
     return media.width < 200 ? nil : media.uri
   end
 
