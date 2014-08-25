@@ -46,26 +46,27 @@ require "./lisa_the_birdie"
 
 # end
 
-LisaToolbox.looper do 
-  elite_lisa = LisaTheEliteTweetMaker.new({
-    :auth => {
-        :consumer_key => 'xSk9IoxQbnxKbw0ebjuJ6sV5o',
-        :consumer_secret =>'Lyp1xWyReu7kgday1QOR7XN3JMA9OrB7LvBooKs3shciWimqat',
-        :token =>'137607844-Gzmkt1zs696XZnX3GpyT7Lba2rT7E6TAIORxA9LU',
-        :secret => '29eTALhvojnN3uRRqBTnI8k6Ej1pbDU0XhFjAS9vuui44'
-    },
-    :parse => {
-      :application_id => "ZkdRD4LbeKFxkaviTOmOY29eQ6VaPNV4h96N4qXV",
-      :api_key => "yVnIz9AoDA3XlZPEMlG7tR9icMdcimm6Cvdxlush" 
-    },
-    :myself => "ravi_asnani"
-  })
 
+elite_lisa = LisaTheEliteTweetMaker.new({
+  :auth => {
+      :consumer_key => 'xSk9IoxQbnxKbw0ebjuJ6sV5o',
+      :consumer_secret =>'Lyp1xWyReu7kgday1QOR7XN3JMA9OrB7LvBooKs3shciWimqat',
+      :token =>'137607844-Gzmkt1zs696XZnX3GpyT7Lba2rT7E6TAIORxA9LU',
+      :secret => '29eTALhvojnN3uRRqBTnI8k6Ej1pbDU0XhFjAS9vuui44'
+  },
+  :parse => {
+    :application_id => "ZkdRD4LbeKFxkaviTOmOY29eQ6VaPNV4h96N4qXV",
+    :api_key => "yVnIz9AoDA3XlZPEMlG7tR9icMdcimm6Cvdxlush" 
+  },
+  :myself => "ravi_asnani"
+})
+
+LisaToolbox.looper do 
   elite_lisa.make_elite_tweets_for_keyword_cloud(
       [
         ['food', 'delicious'],
         ['food', 'cook', 'recipe'],
-        ['vegetarian', 'non', 'veg'],
+        ['vegetarian', 'vegan'], ['nonveg'],
         ['cake', 'recipe'],
         ['cheese'], ['burger'], 
         ["italian", "cuisine"],
@@ -78,7 +79,7 @@ LisaToolbox.looper do
         ["honda"],
         ["electric", "cars"],
         ["hybrid", "cars"],
-        ["sushi"], ["grill"], ["salad"], ["johny", "rockets"], ["lebanese"], ["fat", "lulu"], ["pizza"],
+        ["sushi"], ["grilled", "food"], ["salad"], ["johny", "rockets"], ["lebanese", "food"], ["fat", "lulu"], ["pizza"],
         ["pagani"], ["mclaren"], ["top", "gear"]
       ]
     )

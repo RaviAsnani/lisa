@@ -6,12 +6,12 @@ require "./lisa_the_birdie"
 # Main execution starts here
 lisa = LisaTheChattyBird.new({
     :auth => {
-      :consumer_key => 'fl8Xb0Lv6CkKdbNAMGB8mBUrG',
-      :consumer_secret =>'mAtdDResuDJp9xwsInihXD5rcDpMEnJ4nMRtOGtcNSH0agbZ28',
-      :token =>'2592724712-o8gSOnGMuwUfaXcB1nGR1hrUIk9YkSDrBX108Fx',
-      :secret => 'Qw8AQGMR1K2HAWfZ6GkACLOG66I6UdVIYF9iQcdHUQKgA'
+      :consumer_key => '07y02Rx3pjpVlAqmwiLZeONBQ',
+      :consumer_secret =>'SFN4ennNrCRu8eL7piWRRvJrpupi8IV5dDcN3gnPcms97LlRAt',
+      :token =>'2592724712-sATvge1OdeqOd1zpE2riTKpiPaCmn0o3Jarnppe',
+      :secret => 'XtH5VQKXVURUDfQ0GPqxrcYO4wGMqdUcLnF26PP0YoVz0'
     }
   })
 
 #lisa.start_chatting
-lisa.start_chatting_with_friends_of(["recode"])
+lisa.start_chatting_with_friends_of(["500startups"])

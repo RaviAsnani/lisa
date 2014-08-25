@@ -2,8 +2,11 @@ require 'rubygems'
 require 'chatterbot/dsl'
 require 'parse-ruby-client'
 require "pp"
-require "google-search"
-require "cgi" # for unescaping html entities
+require "google-search"     # used for image search
+require "cgi"               # for unescaping html entities
+
+require "./libs/google/curbemu.rb"
+require "./libs/google/ruby-web-search.rb"
 
 
 # Holds tweets & users of interest
@@ -72,12 +75,14 @@ module LisaToolbox
     puts "Pre Thread #{name} at #{Time.now}"
 
     # Don't wait for it to finish
-    Thread.start do
+    thread = Thread.start do
       block.call
     end
 
     puts "Post Thread #{name} at #{Time.now}"
-    puts "################################################################"    
+    puts "################################################################"   
+
+    return thread 
   end
 
 
@@ -304,7 +309,7 @@ class LisaTheChattyBird
 
   # Streaming events for friends of given users
   def setup_friends_event_loop(friend_ids)
-    follow_filter = friend_ids.join(",")
+    follow_filter = friend_ids.shuffle[0...1000].join(",")
     @stream.filter({:follow => follow_filter}) {|object| 
       common_event_loop(object, :general, {:friend_ids => friend_ids})
     }    
@@ -371,7 +376,9 @@ class LisaTheChattyBird
       @live_tweets << BirdFood.new(tweet, :clone)  if @lisa.is_clonable?(tweet, :live) == true
       @live_tweets << BirdFood.new(tweet, :retweet)  if @lisa.is_retweetable?(tweet, :live) == true
       @live_tweets << BirdFood.new(tweet, :star)  if @lisa.is_starrable?(tweet, :live) == true
-      @live_tweets << BirdFood.new(tweet.user, :follow)  if @lisa.is_followable?(tweet.user, :live) == true
+      
+      # Don't engage in following from here - can lead to very bad bans (as all the people will generally be of high quality)
+      #@live_tweets << BirdFood.new(tweet.user, :follow)  if @lisa.is_followable?(tweet.user, :live) == true
       print "Q"
     end #if
   end
@@ -388,9 +395,9 @@ class LisaTheChattyBird
           random_sleep
         else
           if food_item.operation == :follow
-            @lisa.send(food_item.operation, food_item.stuff, true, :preview)
+            @lisa.send(food_item.operation, food_item.stuff, true, :real)
           else
-            @lisa.send(food_item.operation, food_item.stuff, :preview)
+            @lisa.send(food_item.operation, food_item.stuff, :real)
           end
         end
       end
@@ -489,18 +496,18 @@ class LisaTheBirdie
       },
       :lang => "en", 
       :tweet => {
-        :min_retweet_count => 1, 
-        :min_star_count => 1,
-        :moderate_retweet_count => 2,
-        :moderate_star_count => 2,  
-        :high_retweet_count => 4,
-        :high_star_count => 4   # To get more starrable tweets into the honeypot :)
+        :min_retweet_count => 2, 
+        :min_star_count => 2,
+        :moderate_retweet_count => 4,
+        :moderate_star_count => 4,  
+        :high_retweet_count => 6,
+        :high_star_count => 6   # To get more starrable tweets into the honeypot :)
       },
       :user => {
-        :followers_to_friends_ratio => 0.3,
-        :min_followers_count => 250,
+        :followers_to_friends_ratio => 0.4,
+        :min_followers_count => 500,
         :min_star_count => 25,
-        :min_tweet_count => 1000,
+        :min_tweet_count => 1500,
         :account_age => 0
       },
       :exclude => [] # Array of strings
@@ -536,9 +543,10 @@ class LisaTheBirdie
 
 
   # Searches and then eats the infested tweets/users
-  def feast_on_keywords(keywords, operations = nil)
+  # search_operator => "AND" || "OR"
+  def feast_on_keywords(keywords, operations = nil, search_operator = "OR")
     operations = {:starrable => true, :retweetable => true, :clonable => true, :followable => true} if operations == nil
-    bird_food = search_tweets(keywords, operations)
+    bird_food = search_tweets(keywords, operations, search_operator)
 
     # Process all bird food and call their related methods
     length = bird_food.length
@@ -580,7 +588,7 @@ class LisaTheBirdie
     record_hit(:tweet_infested, tweet.id)
 
     rate_limit(:retweet) { client.retweet(tweet.id) }
-    random_sleep(SLEEP_AFTER_ACTION, 1, SLEEP_AFTER_ACTION)
+    random_sleep(SLEEP_AFTER_ACTION, 1, SLEEP_AFTER_ACTION*5)
   end
 
 
@@ -590,6 +598,7 @@ class LisaTheBirdie
     return false if check_hit?(:tweet_infested, tweet.id, :verbose) == true
 
     clone_text = "#{tweet.text} via .@#{tweet.user.handle}"
+    clone_text = "#{tweet.text}" if clone_text.length > 140 # revert back to original text if new length with "via .@foo" > 140
     
     #log("Cloning tweet (id=>#{tweet.id}) : [#{tweet.user.handle}] : #{clone_text}")
     log(tweet, "CLONE")
@@ -598,21 +607,21 @@ class LisaTheBirdie
     record_hit(:tweet_infested, tweet.id)
 
     rate_limit(:clone) { client.update(clone_text) }
-    random_sleep(SLEEP_AFTER_ACTION, 1, SLEEP_AFTER_ACTION*2)
+    random_sleep(SLEEP_AFTER_ACTION, 1, SLEEP_AFTER_ACTION*5)
   end   
 
 
 
   # NOTE - Actually does the tweet with given media file
   # tweet => {:text => "text", :media_path => "/some/file/path"}
-  def tweet_with_media(tweet, mode = :real)
+  def tweet_with_media(tweet, sleep_multiplier = 15, mode = :real)
     log(tweet, "tweet_with_media")
     return if mode == :preview
      
     rate_limit(:tweet_with_media) { 
       tweet[:media_path].nil? ? client.update(tweet[:text]) : client.update_with_media(tweet[:text], File.new(tweet[:media_path])) 
     }
-    random_sleep(SLEEP_AFTER_ACTION, 1, SLEEP_AFTER_ACTION*15)
+    random_sleep(SLEEP_AFTER_ACTION, 1, SLEEP_AFTER_ACTION*sleep_multiplier)
   end 
 
 
@@ -628,7 +637,7 @@ class LisaTheBirdie
     record_hit(:followed, user.handle)
 
     rate_limit(:follow) { client.follow(user.handle) }
-    random_sleep(SLEEP_AFTER_ACTION, 1, SLEEP_AFTER_ACTION)
+    random_sleep(SLEEP_AFTER_ACTION, 1, SLEEP_AFTER_ACTION*5)
   end
 
 
@@ -714,9 +723,11 @@ class LisaTheBirdie
 
   # Search based on an array of given keywords
   # operations => {:starrable => true, :retweetable => true, :clonable => true, :followable => true}
-  def search_tweets(keywords, operations)
+  # Randomly, tries to find tweets which are only text status (no link)
+  def search_tweets(keywords, operations, search_operator = "OR")
     all_bird_food = []
-    search_text = keywords.length > 1 ? keywords.join(" OR ") : keywords.first
+    search_text = keywords.length > 1 ? keywords.join(" #{search_operator} ") : keywords.first
+    search_text += Time.now.to_i%2 == 0 ? "" : " '-http://' -'https://'"
     puts "\n======================================================"
     puts "Searching for #{search_text}"
 
@@ -798,7 +809,7 @@ class LisaTheBirdie
   def is_starrable?(tweet, mode = :search)
     if mode == :search
       # Min star count
-      if tweet.favorite_count >= @config[:tweet][:min_star_count]
+      if tweet.favorite_count >= @config[:tweet][:moderate_star_count]
         return true
       end
     end
@@ -820,9 +831,9 @@ class LisaTheBirdie
   # mode => :search || :live
   def is_retweetable?(tweet, mode = :search)
     if mode == :search
-      # Not a reply, High retweet count, moderate star count
+      # Not a reply, min retweet count, moderate star count
       if ((tweet.favorite_count >= @config[:tweet][:moderate_star_count] \
-                and tweet.retweet_count >= @config[:tweet][:high_retweet_count]  \
+                and tweet.retweet_count >= @config[:tweet][:min_retweet_count]  \
                 and tweet.reply? == false)) \
             or (is_followable?(tweet.user) == true)
         return true
@@ -925,11 +936,11 @@ class LisaTheEliteTweetMaker
 
 
   # search_keyword_cloud => array of array of keywords
-  def make_elite_tweets_for_keyword_cloud(search_keyword_cloud)
+  def make_elite_tweets_for_keyword_cloud(search_keyword_cloud, sleep_multiplier = 15)
     search_keyword_cloud.shuffle.each { |search_keywords|
       log("Finding an elite tweet for #{search_keywords}")
       tweet = make_elite_tweet_for(search_keywords)
-      @lisa.tweet_with_media(tweet)
+      @lisa.tweet_with_media(tweet, sleep_multiplier)
     }
   end
 
@@ -944,12 +955,13 @@ class LisaTheEliteTweetMaker
 
     # If news is not returning anything, sleep for enough time for a news item to be generated
     if elite_tweet == nil
-      random_sleep(SLEEP_GENERIC, 1, SLEEP_GENERIC*10)
+      puts "Could not find any news item for elite tweet"
+      #random_sleep(SLEEP_GENERIC, 1, SLEEP_GENERIC*10)
       return
     end
 
-    unescaped_tweet_text = add_hashtags(CGI.unescapeHTML(elite_tweet[:item].title), search_query)
-    tweet_text = "#{unescaped_tweet_text}  #{elite_tweet[:item].uri}"
+    unescaped_tweet_text = add_hashtags(CGI.unescapeHTML(elite_tweet[:item][:title]), search_query)
+    tweet_text = "#{unescaped_tweet_text}  #{elite_tweet[:item][:url]}"
     media_uri_md5 = nil
 
     #puts tweet_text, elite_tweet[:media_uri]
@@ -971,10 +983,12 @@ class LisaTheEliteTweetMaker
   # For a given search query, returns the first unique news item
   def find_news(search_query)
     klass = "lisaTheEliteTweeter_#{@myself}"
-    Google::Search::News.new(:query => search_query.join(" ")).each { |item|
-      if check_hit?(klass, item.uri) == false
-        record_hit(klass, item.uri)
-        return {:item => item, :media_uri => find_media(item.title)} 
+
+    response = RubyWebSearch::Google.search(:type => :news, :query => search_query.join(" "), :size => 100)
+    response.results.each { |item|
+      if check_hit?(klass, item[:url]) == false and item[:language] == 'en'
+        record_hit(klass, item[:url])
+        return {:item => item, :media_uri => find_media(item[:title])} 
       end
     }
 
@@ -984,9 +998,14 @@ class LisaTheEliteTweetMaker
 
   # For a given tweet title, returns the first available google image 
   def find_media(tweet_text)
-    media = Google::Search::Image.new(:query => tweet_text).first
-    return nil if media == nil
-    return media.width < 200 ? nil : media.uri
+    puts "Finding image for : #{tweet_text}"
+    possible_media = Google::Search::Image.new(:query => tweet_text, :safety_level => :medium)
+    possible_media.each { |media|
+      print "X"
+      log(media.uri, "MEDIA") if media.width >= 200
+      return media.uri if media.width >= 200
+    }
+    return nil
   end
 
 
