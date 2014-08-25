@@ -41,7 +41,9 @@ def engage_by_elite_tweets
           ["funding", "invest"],
           ["social", "media"],
           ["WebsiteDesign"],
-          ["WebDevelopment"]
+          ["WebDevelopment"], 
+          ["angularjs"], ["javascript"], ["ubuntu"], ["smartwatch"], ["android", "wear"], ["moto360"], ["IFA2014"],
+          ["ruby", "programming"] 
         ],
       10)
   end
@@ -87,7 +89,10 @@ def engage_by_search
                     ["#funding", "#invest"],
                     ["#social", "#media"],
                     ["#WebsiteDesign"],
-                    ["#WebDevelopment"]
+                    ["#WebDevelopment"],
+                    ["#angularjs"], ["#javascript"], ["#ubuntu"], ["#smartwatch"], 
+                    ["#android", "#wear"], ["#moto360"], ["#IFA2014"],
+                    ["rubyonrails"], ["#backbonejs"], ["#apple", '#swift'], ["#python"], ["#lamp", "#php"]
                  ]
       keywords.shuffle.each do |keyword_set|
         lisa2.feast_on_keywords(keyword_set, 
