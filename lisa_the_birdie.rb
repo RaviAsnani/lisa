@@ -1007,6 +1007,8 @@ class LisaTheEliteTweetMaker
   def find_media(tweet_text)
     puts "Finding image for : #{tweet_text}"
     possible_media = GoogleImageSearch.new.search(tweet_text)
+    return possible_media is possible_media.nil?
+    
     possible_media.each { |media|
       print "X"
       log(media[:url], "MEDIA") if media[:width] >= 200
