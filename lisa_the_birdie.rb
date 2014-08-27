@@ -766,6 +766,10 @@ class LisaTheBirdie
     # Don't process the tweet if we have already infested it before
     return false if check_hit?(:tweet_infested, tweet.id) == true
 
+    # Exclude the tweet if it has lots of hashtags or @ mentions
+    return false if tweet.text.count("#") > 3
+    return false if tweet.text.count("@") >= 3
+
     score = 0
     if mode == :search
       score += 1 if tweet.retweet_count >= @config[:tweet][:min_retweet_count] 
@@ -1001,12 +1005,12 @@ class LisaTheEliteTweetMaker
   def find_media(tweet_text)
     puts "Finding image for : #{tweet_text}"
     possible_media = GoogleImageSearch.new.search(tweet_text)
-    #possible_media = Google::Search::Image.new(:query => tweet_text, :safety_level => :medium)
     possible_media.each { |media|
       print "X"
       log(media[:url], "MEDIA") if media[:width] >= 200
       return media[:url] if media[:width] >= 200
     }
+    puts CGI.escape(tweet_text)
     return nil
   end
 

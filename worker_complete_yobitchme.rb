@@ -53,7 +53,7 @@ end
 
 def engage_by_search
   exclude_keywords = ["yobitchme", "Easy_Branches", "RachelMajor2000", 
-                    "gamedev", "indiedev", "Audiograbber", "buy", "deal", "biz", "follower"]
+                    "gamedev", "indiedev", "Audiograbber", "buy", "deal", "biz", "follower", "buymonthlyfollowers"]
   # Engage for ST, F, RT, Clone
   lisa2 = LisaTheBirdie.new({
       :auth => $auth,
