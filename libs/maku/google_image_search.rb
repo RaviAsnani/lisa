@@ -1,11 +1,11 @@
 require "httparty"
-require 'cgi'
+require 'htmlentities'
 
 class GoogleImageSearch
 
 	def search(query)
 		response = HTTParty.get('https://ajax.googleapis.com/ajax/services/search/images', 
-								:query => {:v => "1.0", :q => CGI.escape(query), 
+								:query => {:v => "1.0", :q =>  HTMLEntities.new.decode(query), 
 											:start => 0, :rsz => "large", :hl => "en", :gl => "in"}, 
 								:headers => {"User-Agent" => "Google Bot", "Referer" => "http://www.google.com"})
 		response_json = JSON.parse(response.body)
