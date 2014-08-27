@@ -9,8 +9,7 @@ class GoogleImageSearch
 											:start => 0, :rsz => "large", :hl => "en", :gl => "in"}, 
 								:headers => {"User-Agent" => "Google Bot", "Referer" => "http://www.google.com"})
 		response_json = JSON.parse(response.body)
-		if response_json != nil and response_json.keys.index("responseData") != nil \
-			and response_json["responseData"].keys.index("results") != nil
+		if response_json != nil and response_json.keys.index("responseData") != nil
 			return parse_success_response(response_json)
 		end
 
