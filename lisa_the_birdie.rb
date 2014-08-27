@@ -4,6 +4,7 @@ require 'parse-ruby-client'
 require "pp"
 require "google-search"     # used for image search
 require "cgi"               # for unescaping html entities
+require "googl"
 
 require "./libs/google/curbemu.rb"
 require "./libs/google/ruby-web-search.rb"
@@ -945,7 +946,7 @@ class LisaTheEliteTweetMaker
     search_keyword_cloud.shuffle.each { |search_keywords|
       log("Finding an elite tweet for #{search_keywords}")
       tweet = make_elite_tweet_for(search_keywords)
-      @lisa.tweet_with_media(tweet, sleep_multiplier)
+      @lisa.tweet_with_media(tweet, sleep_multiplier) if not tweet.nil?
     }
   end
 
@@ -962,11 +963,12 @@ class LisaTheEliteTweetMaker
     if elite_tweet == nil
       puts "Could not find any news item for elite tweet"
       #random_sleep(SLEEP_GENERIC, 1, SLEEP_GENERIC*10)
-      return
+      return nil
     end
 
     unescaped_tweet_text = add_hashtags(CGI.unescapeHTML(elite_tweet[:item][:title]), search_query)
-    tweet_text = "#{unescaped_tweet_text}  #{elite_tweet[:item][:url]}"
+    short_url = Googl.shorten(elite_tweet[:item][:url]).short_url
+    tweet_text = "#{unescaped_tweet_text}  #{short_url}"
     media_uri_md5 = nil
 
     #puts tweet_text, elite_tweet[:media_uri]
