@@ -1004,8 +1004,8 @@ class LisaTheEliteTweetMaker
     #possible_media = Google::Search::Image.new(:query => tweet_text, :safety_level => :medium)
     possible_media.each { |media|
       print "X"
-      log(media[:uri], "MEDIA") if media[:width] >= 200
-      return media[:uri] if media[:width] >= 200
+      log(media[:url], "MEDIA") if media[:width] >= 200
+      return media[:url] if media[:width] >= 200
     }
     return nil
   end
