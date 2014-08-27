@@ -5,11 +5,11 @@ class GoogleImageSearch
 
 	def search(query)
 		response = HTTParty.get('https://ajax.googleapis.com/ajax/services/search/images', 
-								:query => {:v => "1.0", :q => CGI.escape(@query), 
+								:query => {:v => "1.0", :q => CGI.escape(query), 
 											:start => 0, :rsz => "large", :hl => "en", :gl => "in"}, 
 								:headers => {"User-Agent" => "Google Bot", "Referer" => "http://www.google.com"})
 		response_json = JSON.parse(response.body)
-		if response_json.keys.index("responseData") != nil
+		if response_json.keys.index("responseData") != nil and response_json["responseData"].keys.index("results") != nil
 			return parse_success_response(response_json)
 		end
 
@@ -17,13 +17,14 @@ class GoogleImageSearch
 	end
 
 
-	def parse_success_response(objects)
+	def parse_success_response(response_json)
 		results = []
+		objects = response_json["responseData"]["results"]
 		objects.each { |object|
 			results << {
 				:url => object["url"],
-				:width => object["width"],
-				:height => object["height"]
+				:width => object["width"].to_i,
+				:height => object["height"].to_i
 			}
 		}	
 		return results

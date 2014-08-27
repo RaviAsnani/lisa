@@ -7,6 +7,7 @@ require "cgi"               # for unescaping html entities
 
 require "./libs/google/curbemu.rb"
 require "./libs/google/ruby-web-search.rb"
+require "./libs/maku/google_image_search.rb"
 
 
 # Holds tweets & users of interest
@@ -999,11 +1000,12 @@ class LisaTheEliteTweetMaker
   # For a given tweet title, returns the first available google image 
   def find_media(tweet_text)
     puts "Finding image for : #{tweet_text}"
-    possible_media = Google::Search::Image.new(:query => tweet_text, :safety_level => :medium)
+    possible_media = GoogleImageSearch.new.search(tweet_text)
+    #possible_media = Google::Search::Image.new(:query => tweet_text, :safety_level => :medium)
     possible_media.each { |media|
       print "X"
-      log(media.uri, "MEDIA") if media.width >= 200
-      return media.uri if media.width >= 200
+      log(media[:uri], "MEDIA") if media[:width] >= 200
+      return media[:uri] if media[:width] >= 200
     }
     return nil
   end
