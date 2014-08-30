@@ -6,7 +6,8 @@ lisa
 
 Todo
 ====
+All outgoing tweets to be queued into a global array, then pushed out in randomized fashion
 
-In basic tweets of interest check, make sure that only those tweets are passed though which have <=2 hashtags. Block everything else
+Tweet at a limit of 100/day - have a more stringent selection criteria
 
-Only let the happy looking tweets pass through
+Randomly choose to omit url's from tweets when they don't contain keywords like here, this, if, why (tweets/tweets_with_links ration should be high)
