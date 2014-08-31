@@ -82,7 +82,7 @@ def engage_by_search
                     ['#iphone', '#app'], 
                     ["#iphone", "#jailbreak"],
                     ["#app", "#development"],
-                    ['#startup'], ["#Entrepreneur"], ["#Venture", "#Capital"], ["#Crowdfunding"],
+                    ['#startup'], ["#Entrepreneur"], ["#Venture", "#Capital"], ["#Crowdfunding", "startup"],
                     ['#cloud', '#analytics'], 
                     ["#windows", "#mobile"], ["#winmo"],
                     ["#ycombinator"], ["#Startup", "#School"],
@@ -92,7 +92,8 @@ def engage_by_search
                     ["#WebDevelopment"],
                     ["#angularjs"], ["#javascript"], ["#ubuntu"], ["#smartwatch"], 
                     ["#android", "#wear"], ["#moto360"], ["#IFA2014"],
-                    ["rubyonrails"], ["#backbonejs"], ["#apple", '#swift'], ["#python"], ["#lamp", "#php"]
+                    ["rubyonrails"], ["#backbonejs"], ["#apple", '#swift'], ["#python"], ["#lamp", "#php"],
+                    ["#startupchile"]
                  ]
       keywords.shuffle.each do |keyword_set|
         lisa2.feast_on_keywords(keyword_set, 
@@ -111,7 +112,7 @@ def engage_by_realtime
     })
 
   #lisa.start_chatting
-  lisa.start_chatting_with_friends_of(["ericschmidt", "sundarpichai"])
+  lisa.start_chatting_with_friends_of(["startupchile", "500Startups"])
 end
 
 

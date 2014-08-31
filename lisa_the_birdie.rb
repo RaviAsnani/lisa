@@ -21,7 +21,7 @@ end
 module LisaToolbox
 
   SLEEP_AFTER_RATE_LIMIT_ENGAGED = 60*5 # 5 min
-  SLEEP_GENERIC = 60 # secs
+  SLEEP_GENERIC = 60*5 # secs
 
 
   # klass => :tweet || :user
@@ -729,7 +729,8 @@ class LisaTheBirdie
   def search_tweets(keywords, operations, search_operator = "OR")
     all_bird_food = []
     search_text = keywords.length > 1 ? keywords.join(" #{search_operator} ") : keywords.first
-    search_text += Time.now.to_i%2 == 0 ? "" : " '-http://' -'https://'"
+    search_text += Time.now.to_i%2 == 0 ? " filter:images" : " -http"
+    search_text += " -I -we -me -our" # Exclude any terms which can make the tweet personal
     puts "\n======================================================"
     puts "Searching for #{search_text}"
 
