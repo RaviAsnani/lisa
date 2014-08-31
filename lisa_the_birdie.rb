@@ -474,7 +474,7 @@ class LisaTheBirdie
 
   attr_accessor :config, :bird_food_stats
 
-  SLEEP_AFTER_ACTION = 60 # secs
+  SLEEP_AFTER_ACTION = 60*5 # secs
   SLEEP_AFTER_SHOUTOUT = 60*10 # 15 mins
   APP_URL = "http://j.mp/yo_bitch"
 
