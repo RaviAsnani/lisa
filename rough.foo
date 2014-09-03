@@ -1,0 +1,67 @@
+t=[]; lisa2.client.search("twitter", :lang => "en", :filter => "images") do |tweet|
+  puts tweet[:text]
+  t<<tweet
+end
+
+lisa.stream.filter({:follow => "2592724712,99530011,"}) {|object| 
+  puts "@#{object.user.handle} : #{object.text}" if object.is_a?(Twitter::Tweet)
+}
+
+
+
+require 'rubygems'
+require 'chatterbot/dsl'
+require "pp"
+config = {
+  :auth => {
+    :consumer_key => '07y02Rx3pjpVlAqmwiLZeONBQ',
+    :consumer_secret =>'SFN4ennNrCRu8eL7piWRRvJrpupi8IV5dDcN3gnPcms97LlRAt',
+    :token =>'2592724712-sATvge1OdeqOd1zpE2riTKpiPaCmn0o3Jarnppe',
+    :secret => 'XtH5VQKXVURUDfQ0GPqxrcYO4wGMqdUcLnF26PP0YoVz0'
+  }
+}
+consumer_key(config[:auth][:consumer_key])
+consumer_secret(config[:auth][:consumer_secret])
+token(config[:auth][:token])
+secret(config[:auth][:secret])
+exclude "foo"
+t=[];search(["twitter", "fb"]) {|tt| t<<tt}
+
+
+User search
+Bing : site:twitter.com tweets "android" "blog"
+Gem : http://rdoc.info/gems/twitter/Twitter/REST/Users#user_search-instance_method
+
+AndroidBlog_br OR blog_android OR AndroidBlogNews
+
+nohup ./worker_chatty.rb > nohup_chatty.out 2>&1 &
+
+
+via_mention => tweet.index("via").nil? AND tweet.index("via") < tweet.index("@")
+
+Clone =>      +link +media +via_mention +tweet.id%2==rand(2)   # @mention will also ping the via_mentioned user :)
+Retweet =>    +link -mention +media +tweet.id%2==rand(2)    # perfect for retweeting
+Star =>       +link -mention +tweet.id%2==rand(2)
+
+TODO
+- Seems like this twitter app is not working. Create a new one
+- Realtime : Tweets are being picked up for all 3 - C+R+S - find why
+- Log management
+- Timer should be progressbar based
+- Combined engager
+- Global way of creating an exclusion list
+
+
+
+Actions
+- Star : Outgoing
+- Clone+Mention : Incoming + Outgoing
+- Retweet : Outgoing + Incoming
+- Follow : Outgoing
+
+
+
+
+
+
+

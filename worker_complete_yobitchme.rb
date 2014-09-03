@@ -17,13 +17,13 @@ $parse_auth = {
 
 
 def engage_by_elite_tweets
-  elite_lisa = LisaTheEliteTweetMaker.new({
-    :auth => $auth,
-    :parse => $parse_auth,
-    :myself => "yobitchme"
-  })
-
-  LisaToolbox.looper do 
+  LisaToolbox.looper do
+    elite_lisa = LisaTheEliteTweetMaker.new({
+      :auth => $auth,
+      :parse => $parse_auth,
+      :myself => "yobitchme"
+    })
+ 
     elite_lisa.make_elite_tweets_for_keyword_cloud(
         [
           ["design", "typography"], ["fonts", "typeface"], ["Graphic", "Design", "photoshop"],
@@ -47,6 +47,7 @@ def engage_by_elite_tweets
         ],
       10)
   end
+
 end
 
 
@@ -54,53 +55,55 @@ end
 def engage_by_search
   exclude_keywords = ["packages", "yobitchme", "Easy_Branches", "RachelMajor2000", 
                     "gamedev", "indiedev", "Audiograbber", "buy", "deal", "biz", "follower", "buymonthlyfollowers"]
-  # Engage for ST, F, RT, Clone
-  lisa2 = LisaTheBirdie.new({
-      :auth => $auth,
-      :parse => $parse_auth,
-      :exclude => exclude_keywords,
-      :lang => "en", 
-      :tweet => {
-        :min_retweet_count => 2, 
-        :min_star_count => 2,
-        :moderate_retweet_count => 3,
-        :moderate_star_count => 3,  
-        :high_retweet_count => 5,
-        :high_star_count => 5   # To get more starrable tweets into the honeypot :)
-      }      
-    })
-
+  
   LisaToolbox.looper do
-    lisa2.rate_limit(:looper_internal) {
-      puts "\n\n=================Engage for ST, F, RT, Clone===================="
-      keywords = [
-                    ["#design", "#typography"], ["#fonts"], ["#typeface"], ["#Design", "#photoshop"],
-                    ['#android'], ["#googleplay"],
-                    ['#marketing', '#seo'], ["#MarketingTips"],
-                    ['#growthhacking'],
-                    ['#android', "#app"], 
-                    ['#iphone', '#app'], 
-                    ["#iphone", "#jailbreak"],
-                    ["#app", "#development"],
-                    ['#startup'], ["#Entrepreneur"], ["#Venture", "#Capital"], ["#Crowdfunding", "startup"],
-                    ['#cloud', '#analytics'], 
-                    ["#windows", "#mobile"], ["#winmo"],
-                    ["#ycombinator"], ["#Startup", "#School"],
-                    ["#funding", "#invest"],
-                    ["#social", "#media"],
-                    ["#WebsiteDesign"],
-                    ["#WebDevelopment"],
-                    ["#angularjs"], ["#javascript"], ["#ubuntu"], ["#smartwatch"], 
-                    ["#android", "#wear"], ["#moto360"], ["#IFA2014"],
-                    ["rubyonrails"], ["#backbonejs"], ["#apple", '#swift'], ["#python"], ["#lamp", "#php"],
-                    ["#startupchile"]
-                 ]
-      keywords.shuffle.each do |keyword_set|
-        lisa2.feast_on_keywords(keyword_set, 
-                                {:starrable => true, :retweetable => true, :clonable => true, :followable => false},
-                                "AND")
-      end
-    }
+
+    # Engage for ST, F, RT, Clone
+    lisa2 = LisaTheBirdie.new({
+        :auth => $auth,
+        :parse => $parse_auth,
+        :exclude => exclude_keywords,
+        :lang => "en", 
+        :tweet => {
+          :min_retweet_count => 2, 
+          :min_star_count => 2,
+          :moderate_retweet_count => 3,
+          :moderate_star_count => 3,  
+          :high_retweet_count => 5,
+          :high_star_count => 5   # To get more starrable tweets into the honeypot :)
+        }      
+      })
+
+  
+    puts "\n\n=================Engage for ST, F, RT, Clone===================="
+    keywords = [
+                  ["#design", "#typography"], ["#fonts"], ["#typeface"], ["#Design", "#photoshop"],
+                  ['#android'], ["#googleplay"],
+                  ['#marketing', '#seo'], ["#MarketingTips"],
+                  ['#growthhacking'],
+                  ['#android', "#app"], 
+                  ['#iphone', '#app'], 
+                  ["#iphone", "#jailbreak"],
+                  ["#app", "#development"],
+                  ['#startup'], ["#Entrepreneur"], ["#Venture", "#Capital"], ["#Crowdfunding", "startup"],
+                  ['#cloud', '#analytics'], 
+                  ["#windows", "#mobile"], ["#winmo"],
+                  ["#ycombinator"], ["#Startup", "#School"],
+                  ["#funding", "#invest"],
+                  ["#social", "#media"],
+                  ["#WebsiteDesign"],
+                  ["#WebDevelopment"],
+                  ["#angularjs"], ["#javascript"], ["#ubuntu"], ["#smartwatch"], 
+                  ["#android", "#wear"], ["#moto360"], ["#IFA2014"],
+                  ["rubyonrails"], ["#backbonejs"], ["#apple", '#swift'], ["#python"], ["#lamp", "#php"],
+                  ["#startupchile"]
+               ]
+    keywords.shuffle.each do |keyword_set|
+      lisa2.feast_on_keywords(keyword_set, 
+                              {:starrable => true, :retweetable => true, :clonable => true, :followable => false},
+                              "AND")
+    end
+
   end
 end
 
@@ -112,7 +115,7 @@ def engage_by_realtime
     })
 
   #lisa.start_chatting
-  lisa.start_chatting_with_friends_of(["startupchile", "500Startups"])
+  lisa.start_chatting_with_friends_of(["startupchile", "500Startups", "pjain"])
 end
 
 

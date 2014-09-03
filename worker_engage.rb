@@ -76,8 +76,8 @@ require "./lisa_the_birdie"
         :high_star_count => 5   # To get more starrable tweets into the honeypot :)
       },
       :user => {
-        :followers_to_friends_ratio => 0.3,
-        :min_followers_count => 500,
+        :followers_to_friends_ratio => 0.7,
+        :min_followers_count => 1000,
         :min_star_count => 25,
         :min_tweet_count => 1000,
         :account_age => 0
@@ -87,20 +87,30 @@ require "./lisa_the_birdie"
   lisa2.rate_limit(:looper_internal) {
     puts "\n\n=================RUN 2===================="
     keyword_set = [
-                   #['#ruby', '#rails'],
-                   #["#crowdfunding"],
-                   #['#growthhacking'], 
-                   ['#social', "#media"]
-                   # ['#apps', '#android', '#ios', 'ruboto'], 
-                   # ['#startup', '#startups'],
-                   # ['#cloud', '#analytics', '#itunes'], 
-                   # ['#googleplay', '#facebook', '#apple', '#tech'],
-                   # ["android", "ios", "#windows"], 
-                   # ["ycombinator", "wpcentral"], 
-                   # ["androidandme", "androidcentral"], 
-                   # ["funding", "invest"]
+                    #["#design", "#typography"], ["#fonts"], ["#typeface"], ["#Design", "#photoshop"],
+                    ['#android'], ["#googleplay"],
+                    ['#marketing', '#seo'], ["#MarketingTips"],
+                    ['#growthhacking'],
+                    ['#android', "#app"], 
+                    ['#iphone', '#app'], 
+                    #["#iphone", "#jailbreak"],
+                    #["#app", "#development"],
+                    ['#startup'], ["#Entrepreneur"], ["#Venture", "#Capital"], ["#Crowdfunding", "startup"],
+                    ['#cloud', '#analytics'], 
+                    #["#windows", "#mobile"], ["#winmo"],
+                    #["#ycombinator"], ["#Startup", "#School"],
+                    ["#funding", "#invest"],
+                    #["#social", "#media"],
+                    #["#WebsiteDesign"],
+                    #["#WebDevelopment"],
+                    #["#angularjs"], ["#javascript"], ["#ubuntu"], ["#smartwatch"], 
+                    #["#android", "#wear"], ["#moto360"], ["#IFA2014"],
+                    #["rubyonrails"], ["#backbonejs"], ["#apple", '#swift'], ["#python"], ["#lamp", "#php"],
+                    #["#startupchile"]
                  ]
-    $foo = lisa2.feast_on_keywords(keyword_set, nil, "AND", :preview)
+    $foo = lisa2.feast_on_keywords(keyword_set, 
+                      {:starrable => true, :retweetable => true, :clonable => true, :followable => true}, 
+                      "AND", :real)
   }
 
 #end # End looper

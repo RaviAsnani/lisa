@@ -151,13 +151,14 @@ module LisaToolbox
     system(command)
   end
 
+
 end
 
 
 
 
 # Holds tweets & users of interest
-class BirdFood < Struct.new(:stuff, :operations)
+class BirdFood < Struct.new(:stuff, :operations, :user_handle)
   include LisaToolbox
 
   # Custom to_s
@@ -165,12 +166,41 @@ class BirdFood < Struct.new(:stuff, :operations)
     log(stuff, operations.to_json)
   end
 
-  # Returns the operation if a given tweet is selected for more than one operation
-  def get_primary_operation
-    return :star
+
+  # Returns the list of operations if a given tweet is selected for more than one operation
+  # => [:starrable, :followable]
+  # :starrable=4, :clonable=2, :retweetable=1 (use Unix's RWX mechanism for calculating the final outcome)
+  def get_primary_operations
+    sum = 0
+    sum += 4 if operations[:starrable] == true
+    sum += 2 if operations[:clonable] == true
+    sum += 1 if operations[:retweetable] == true
+
+    primary_operations = []
+
+    case sum
+      when 4 # only star
+        primary_operations << :star
+      when 2 # only clone
+        primary_operations << :clone
+      when 1 # only retweet
+        primary_operations << :retweet
+      when 6 # star + clone
+        primary_operations << :star
+      when 7 # star + clone + retweet
+        primary_operations << :clone
+      when 3 # clone + retweet
+        primary_operations << :retweet
+    end # case
+
+    # Issue :follow as a primary operation only if there exists another primary operation along with follow
+    primary_operations << :follow if operations[:followable] == true and sum != 0
+
+    # If nothing else works, return the first available operation
+    return primary_operations
   end
   
-end
+end   # BirdFood
 
 
 
@@ -399,7 +429,7 @@ class LisaTheChattyBird
         :retweetable => @lisa.is_retweetable?(tweet, :live),
         :starrable => @lisa.is_starrable?(tweet, :live),
         :followable => false #@lisa.is_followable?(tweet.user, :live)  # Don't engage in following from here - can lead to very bad bans (as all the people will generally be of high quality)
-      })
+      }, tweet.user.handle)
 
       print "Q"
     end #if
@@ -416,13 +446,15 @@ class LisaTheChattyBird
         if food_item.nil?
           random_sleep
         else
-          if food_item.get_primary_operation == :follow
-            @lisa.send(food_item.get_primary_operation, food_item.stuff, true, :real)
-          else
-            @lisa.send(food_item.get_primary_operation, food_item.stuff, :real)
-          end
-        end
-      end
+          food_item.get_primary_operations.each { |operation|
+            if operation == :follow
+              @lisa.send(operation, food_item.stuff.user, true, :real)
+            else
+              @lisa.send(operation, food_item.stuff, :real)
+            end
+          }
+        end # if
+      end # while
     }
   end
 
@@ -492,7 +524,7 @@ class LisaTheBirdie
   include LisaOnParse
   include LisaToolbox
 
-  attr_accessor :config, :bird_food_stats
+  attr_accessor :config, :bird_food_stats, :exclude_list
 
   SLEEP_AFTER_ACTION = 60*5 # secs
   SLEEP_AFTER_SHOUTOUT = 60*10 # 15 mins
@@ -584,35 +616,91 @@ class LisaTheBirdie
       bird_feed.merge! search_tweets(keywords, operations, search_operator, {:exclude_links => true}) # Find tweets without links
     }
 
+    log("=================================================================", "STARTING OPERATIONS")
+
+    best_bird_feed = select_best_bird_food(bird_feed)
+    publish_stats(best_bird_feed)
+    process_bird_feed(best_bird_feed, mode)
+
+    # Return back all of the bird food to the caller for further processing
+    return best_bird_feed
+  end
+
+
+
+  # Does the final outbound processing on bird_feed
+  # bird_feed => hash {tweet_id => BirdFood}
+  def process_bird_feed(bird_feed, mode)
     # Process all bird food and call their related methods
-    bird_feed = select_best_bird_food(bird_feed)
     length = bird_feed.keys.length
 
-    index = 0
-    bird_feed.each { |tweet_id, food_item|
-      log "-------------------------------------------------------------------"
-      log "Processing [#{index}/#{length}] tweet/user for #{food_item.get_primary_operation} [#{food_item.operations.to_json}]"
+    # Ensure that all outbound actions are shuffled before they are acted upon
+    all_tweed_ids = bird_feed.keys.shuffle
 
-      if food_item.get_primary_operation == :follow
-        self.send(food_item.get_primary_operation, food_item.stuff, false, mode) #flip to true
-      else
-        self.send(food_item.get_primary_operation, food_item.stuff, mode)
-      end
+    index = 0
+    all_tweed_ids.each { |tweet_id|
+      food_item = bird_feed[tweet_id]
+      puts "-------------------------------------------------------------------"
+      food_item.get_primary_operations.each { |operation|
+        log "Processing [#{index}/#{length}] tweet_id=#{tweet_id} for #{food_item.get_primary_operations.to_json}"        
+        if operation == :follow
+          self.send(operation, food_item.stuff.user, false, mode) # TODO : flip to true
+        else
+          self.send(operation, food_item.stuff, mode)
+        end
+      }  # each
 
       index += 1
     }
+  end
 
-    # Return back all of the bird food to the caller for further processing
-    return bird_feed
+
+
+  # Publish stats about the bird feed which is going to be acted upon. How many clones/RT/star/follow
+  def publish_stats(bird_feed)
+    stats = {:follow => 0, :star => 0, :clone => 0, :retweet => 0}
+    bird_feed.each {|tweet_id, bird_food|
+      bird_food.get_primary_operations.each { |operation|
+        stats[operation] += 1
+      }
+    }
+
+    log stats.to_json
   end
 
 
 
   # Tries to filter the entire list of bird_food and picks out the best
-  # Also implements any daily limits to the bird_food consumption
-  # TODO
-  def select_best_bird_food(bird_food_list)
-    return bird_food_list
+  # Removes any users/tweets which give more than 1x exposure to a given user
+  # bird_feed = {tweet_id => BirdFood, ...}
+  # Returns the cleaned up bird_feed back
+  def select_best_bird_food(bird_feed)
+    original_feed_length = bird_feed.keys.length
+    log "Sanitizing all of the bird_feed, input : #{original_feed_length} tweets"
+
+    # Group by the user handle to know how many unique handles we have...
+    # => {user_handle : [[tweet_id, BirdFood], [tweet_id, BirdFood], ...], ...}
+    bird_feed_grouped_by_handle = bird_feed.group_by {|tweet_id, bird_food| bird_food.user_handle}
+
+    # Delete all tweets from users who we selected for >1x exposure
+    dirty_tweet_ids = []
+    multi_tweet_handles = 0
+    bird_feed_grouped_by_handle.each { |user_handle, objects|
+      if objects.length > 1
+        multi_tweet_handles += 1
+        objects.each {|o|
+          dirty_tweet_ids << o.first # Tweet id
+        }
+      end
+    }
+
+    dirty_tweet_ids.each { 
+      |tweet_id| bird_feed.delete(tweet_id)
+    }
+
+    log "Sanitized : Tweets removed : #{original_feed_length - bird_feed.keys.length} [#{bird_feed.keys.length} left], \
+         User handles removed : #{multi_tweet_handles}"
+    return bird_feed
   end
 
 
@@ -630,7 +718,7 @@ class LisaTheBirdie
     record_hit(:tweet_infested, tweet.id)
 
     rate_limit(:star) { client.favorite(tweet.id) }
-    random_sleep(SLEEP_AFTER_ACTION, 1, SLEEP_AFTER_ACTION)
+    random_sleep(SLEEP_AFTER_ACTION, 0.2, SLEEP_AFTER_ACTION) # We don't need to sleep so long after starring
   end
 
 
@@ -781,7 +869,7 @@ class LisaTheBirdie
       } # rate limit
     end    
 
-    return counter > 0 ? BirdFood.new(tweet, food_item_ops) : nil
+    return counter > 0 ? BirdFood.new(tweet, food_item_ops, tweet.user.handle) : nil
   end
 
 
@@ -795,7 +883,8 @@ class LisaTheBirdie
     search_text = keywords.length > 1 ? keywords.join(" #{search_operator} ") : keywords.first
     search_text += " filter:images" if micro_options[:include_images] == true
     search_text += " -http" if micro_options[:exclude_links] == true
-    search_text += " -I -we -me -our" # Exclude any terms which can make the tweet personal
+    search_text += " -I -am -we -my -our"
+
     puts "\n======================================================"
     puts "Searching for #{search_text}"
 
@@ -821,8 +910,10 @@ class LisaTheBirdie
   def setup_exclusions(custom_exclude_list = [])
     default_exclusion = ["money", "spammer", "junk", "spam", "fuck", "pussy", "ass", 
                           "shit", "piss", "cunt", "mofo", "cock", "tits", "wife", "sex", "porn",
-                          "my", "thanks", "I ", "gun", "wound", "I'm", "I am", "we", "my", "our", "am"]
-    exclude(default_exclusion + custom_exclude_list)
+                          "thanks", "I ", "am", "gun", "wound", "we", "my", "our", "am",
+                          "buy", "deal", "follower"]
+    @exclude_list = default_exclusion + custom_exclude_list
+    exclude(@exclude_list)
   end
 
 
@@ -882,7 +973,7 @@ class LisaTheBirdie
   def is_starrable?(tweet, mode = :search)
     if mode == :search
       # Min star count
-      if tweet.favorite_count >= @config[:tweet][:moderate_star_count]
+      if tweet.favorite_count >= @config[:tweet][:min_star_count]
         return true
       end
     end
@@ -967,7 +1058,12 @@ class LisaTheBirdie
     tweets_count = user.tweets_count
     account_age = 0 # TODO
 
+    return false if followers_count > 20*1000  # Anyone with more than 50,000 followers is practically a company/celebrity
+
     followers_to_friends_ratio = (friends_count != 0 ? (followers_count/friends_count).to_f : 0)
+    friends_to_followers_ratio = 1/followers_to_friends_ratio.to_f
+
+    return false if friends_to_followers_ratio < 0.2 # Anyone who is not following back is practially a company/celebrity
 
     if followers_to_friends_ratio >= @config[:user][:followers_to_friends_ratio]  \
         and stars_count >= @config[:user][:min_star_count] \
