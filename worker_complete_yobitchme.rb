@@ -98,11 +98,9 @@ def engage_by_search
                   ["rubyonrails"], ["#backbonejs"], ["#apple", '#swift'], ["#python"], ["#lamp", "#php"],
                   ["#startupchile"]
                ]
-    keywords.shuffle.each do |keyword_set|
-      lisa2.feast_on_keywords(keyword_set, 
+    lisa2.feast_on_keywords(keywords, 
                               {:starrable => true, :retweetable => true, :clonable => true, :followable => false},
                               "AND")
-    end
 
   end
 end
@@ -125,7 +123,7 @@ def engage
   threads = []
   threads << LisaToolbox.run_in_new_thread(:engage_by_elite_tweets) {engage_by_elite_tweets}
   threads << LisaToolbox.run_in_new_thread(:engage_by_search) {engage_by_search}
-  threads << LisaToolbox.run_in_new_thread(:engage_by_realtime) {engage_by_realtime}
+  #threads << LisaToolbox.run_in_new_thread(:engage_by_realtime) {engage_by_realtime}
   threads.each { |thread| thread.join }
 end
 
