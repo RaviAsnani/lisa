@@ -12,11 +12,12 @@ require "./libs/maku/google_image_search.rb"
 
 
 
+
 # All utility methods which Lisa needs - but are not related to being a bird
 module LisaToolbox
 
-  SLEEP_AFTER_RATE_LIMIT_ENGAGED = 60*5 # 5 min
-  SLEEP_GENERIC = 60*5 # secs
+  SLEEP_AFTER_RATE_LIMIT_ENGAGED = 60*5 # 2 min
+  SLEEP_GENERIC = 60 # secs
 
 
   # klass => :tweet || :user
@@ -101,13 +102,19 @@ module LisaToolbox
 
 
   # Generic logging
-  def log(object, prefix="")
+  def log(object, prefix="log")
+    prefix.upcase!
     timestamp = Time.now.to_s.split(" ")[0..1].join(" ")
     if object.is_a?(Twitter::Tweet)
       pre = "[#{prefix}] [#{timestamp}] [ST:#{object.favorite_count}, RT:#{object.retweet_count}, urls?:#{object.urls?}, media?:#{object.media?}, @M?:#{object.user_mentions?}] : [@#{object.user.id}:#{object.user.handle}]"
       puts "\n=> #{pre} => #{object.text}" 
+    elsif object.is_a?(Twitter::User)
+      pre = "[#{prefix}] [#{timestamp}] [Fo:#{object.followers_count}, Fr:#{object.friends_count}, \
+              Fo/Fr:#{object.followers_count/object.friends_count.to_f}, St:#{object.favorites_count}, \
+              Tw:#{object.tweets_count}] Handle=#{object.handle}"
+      puts "\n=> #{pre}"       
     else
-      puts "\n=> [#{timestamp}] #{object}"
+      puts "\n=> [#{prefix}] [#{timestamp}] #{object}"
     end
   end
 
@@ -149,6 +156,13 @@ module LisaToolbox
   def download_url(url, output_filename, dir_name = "media/tmp")
     command = "wget --quiet '#{url}' -O '#{dir_name}/#{output_filename}'"
     system(command)
+  end
+
+
+  # For a given base, return base+rand(x)
+  def with_x_percentage_additional_random(base, x_percentage)
+    random_x_percentage = rand(x_percentage)
+    return (base + (random_x_percentage*base/100)).to_i
   end
 
 
@@ -526,7 +540,10 @@ class LisaTheBirdie
 
   attr_accessor :config, :bird_food_stats, :exclude_list
 
-  SLEEP_AFTER_ACTION = 60*5 # secs
+  # random_sleep_time = rand(SLEEP_AFTER_ACTION * multiplier) + SLEEP_AFTER_ACTION_BASE
+  SLEEP_AFTER_ACTION = 60 # secs
+  SLEEP_AFTER_ACTION_BASE = 60*5 # secs
+
   SLEEP_AFTER_SHOUTOUT = 60*10 # 15 mins
   APP_URL = "http://j.mp/yo_bitch"
 
@@ -564,13 +581,7 @@ class LisaTheBirdie
         :min_tweet_count => 1500,
         :account_age => 0
       },
-      :exclude => [], # Array of strings
-      :daily_limits => {
-        :star => 100,
-        :retweet => 50,
-        :clone => 100,
-        :follow => 50
-      }
+      :exclude => [] # Array of strings
     }
 
     @config = default_config.merge(config)
@@ -596,7 +607,24 @@ class LisaTheBirdie
     @parse_klass = "People" + "_#{@myself}" 
 
     Parse.init :application_id => config[:parse][:application_id],
-               :api_key        => config[:parse][:api_key]     
+               :api_key        => config[:parse][:api_key]    
+
+    # Numerical limits on outgoing actions
+    @limits = {
+      :run => {
+        :follow => with_x_percentage_additional_random(10, 30),
+        :star => with_x_percentage_additional_random(150, 50),
+        :clone => with_x_percentage_additional_random(100, 50),
+        :retweet => with_x_percentage_additional_random(50, 50)
+      },
+      :actuals => {
+        :follow => 0,
+        :star => 0,
+        :clone => 0,
+        :retweet => 0
+      }
+    }
+
   end
 
 
@@ -665,7 +693,7 @@ class LisaTheBirdie
       }
     }
 
-    log stats.to_json
+    log(stats.to_json, "stats")
   end
 
 
@@ -708,6 +736,7 @@ class LisaTheBirdie
   # NOTE - Actually does the stars
   def star(tweet, mode = :real)
     return false if check_hit?(:tweet_infested, tweet.id, :verbose) == true
+    return false if is_bird_feed_usage_in_limit?(:star) == false
 
     #log("Starring tweet (id=>#{tweet.id}) : [#{tweet.user.handle}] : #{tweet.text}")
     log(tweet, "STAR")
@@ -718,7 +747,8 @@ class LisaTheBirdie
     record_hit(:tweet_infested, tweet.id)
 
     rate_limit(:star) { client.favorite(tweet.id) }
-    random_sleep(SLEEP_AFTER_ACTION, 0.2, SLEEP_AFTER_ACTION) # We don't need to sleep so long after starring
+    increment_bird_feed_usage(:star)
+    random_sleep(SLEEP_AFTER_ACTION, 1, SLEEP_AFTER_ACTION) # We don't need to sleep so long after starring
   end
 
 
@@ -726,6 +756,7 @@ class LisaTheBirdie
   # NOTE - Actually does the retweet
   def retweet(tweet, mode = :real)
     return false if check_hit?(:tweet_infested, tweet.id, :verbose) == true
+    return false if is_bird_feed_usage_in_limit?(:retweet) == false
 
     #log("Retweeting tweet (id=>#{tweet.id}) : [#{tweet.user.handle}] : #{tweet.text}")
     log(tweet, "RETWEET")
@@ -734,7 +765,8 @@ class LisaTheBirdie
     record_hit(:tweet_infested, tweet.id)
 
     rate_limit(:retweet) { client.retweet(tweet.id) }
-    random_sleep(SLEEP_AFTER_ACTION, 1, SLEEP_AFTER_ACTION*5)
+    increment_bird_feed_usage(:retweet)
+    random_sleep(SLEEP_AFTER_ACTION, 1, SLEEP_AFTER_ACTION_BASE)
   end
 
 
@@ -742,6 +774,7 @@ class LisaTheBirdie
   # NOTE - Actually does the clone
   def clone(tweet, mode = :real)
     return false if check_hit?(:tweet_infested, tweet.id, :verbose) == true
+    return false if is_bird_feed_usage_in_limit?(:clone) == false
 
     clone_text = "#{tweet.text} via .@#{tweet.user.handle}"
     clone_text = "#{tweet.text}" if clone_text.length > 140 # revert back to original text if new length with "via .@foo" > 140
@@ -753,14 +786,15 @@ class LisaTheBirdie
     record_hit(:tweet_infested, tweet.id)
 
     rate_limit(:clone) { client.update(clone_text) }
-    random_sleep(SLEEP_AFTER_ACTION, 1, SLEEP_AFTER_ACTION*5)
+    increment_bird_feed_usage(:clone)
+    random_sleep(SLEEP_AFTER_ACTION, 1, SLEEP_AFTER_ACTION_BASE)
   end   
 
 
 
   # NOTE - Actually does the tweet with given media file
   # tweet => {:text => "text", :media_path => "/some/file/path"}
-  def tweet_with_media(tweet, sleep_multiplier = 15, mode = :real)
+  def tweet_with_media(tweet, sleep_multiplier = 10, mode = :real)
     log(tweet, "tweet_with_media")
     return if mode == :preview
      
@@ -774,16 +808,17 @@ class LisaTheBirdie
 
   # NOTE - Actually does the follow
   def follow(user, do_save = true, mode = :real)
-    log("mode=#{mode}", "FOLLOW")
-    log("Following user : [#{user.handle}]")
+    log(user, "follow")
     return if mode == :preview
+    return false if is_bird_feed_usage_in_limit?(:follow) == false
 
     save(@parse_klass, 
           {:handle => user.handle, :mentioned => false, :followed => true, :starred => false}) if do_save == true
     record_hit(:followed, user.handle)
 
     rate_limit(:follow) { client.follow(user.handle) }
-    random_sleep(SLEEP_AFTER_ACTION, 1, SLEEP_AFTER_ACTION*5)
+    increment_bird_feed_usage(:follow)
+    random_sleep(SLEEP_AFTER_ACTION, 1, SLEEP_AFTER_ACTION_BASE)
   end
 
 
@@ -883,7 +918,7 @@ class LisaTheBirdie
     search_text = keywords.length > 1 ? keywords.join(" #{search_operator} ") : keywords.first
     search_text += " filter:images" if micro_options[:include_images] == true
     search_text += " -http" if micro_options[:exclude_links] == true
-    search_text += " -I -am -we -my -our"
+    search_text += " -I -am -we -me -my -our"
 
     puts "\n======================================================"
     puts "Searching for #{search_text}"
@@ -910,7 +945,7 @@ class LisaTheBirdie
   def setup_exclusions(custom_exclude_list = [])
     default_exclusion = ["money", "spammer", "junk", "spam", "fuck", "pussy", "ass", 
                           "shit", "piss", "cunt", "mofo", "cock", "tits", "wife", "sex", "porn",
-                          "thanks", "I ", "am", "gun", "wound", "we", "my", "our", "am",
+                          "thanks", "I ", "am", "gun", "wound", "we", "my", "our", "am", "me",
                           "buy", "deal", "follower"]
     @exclude_list = default_exclusion + custom_exclude_list
     exclude(@exclude_list)
@@ -1083,6 +1118,23 @@ class LisaTheBirdie
   end
 
 
+
+  # Increment the :actuals values in @limits
+  def increment_bird_feed_usage(klass = nil)
+    raise if klass == nil
+    @limits[:actuals][klass] += 1
+    log(@limits[:actuals], "USAGE STATS")
+  end
+
+
+  # Checks to see if we are not crossing out bird feed consumption usage
+  # Returns false if yes, true if within limits
+  def is_bird_feed_usage_in_limit?(klass = nil)
+    raise if klass == nil
+    return @limits[:run][klass] >= @limits[:actuals][klass]
+  end
+
+
 end
 
 
@@ -1105,7 +1157,7 @@ class LisaTheEliteTweetMaker
 
 
   # search_keyword_cloud => array of array of keywords
-  def make_elite_tweets_for_keyword_cloud(search_keyword_cloud, sleep_multiplier = 15)
+  def make_elite_tweets_for_keyword_cloud(search_keyword_cloud, sleep_multiplier = 10)
     search_keyword_cloud.shuffle.each { |search_keywords|
       log("Finding an elite tweet for #{search_keywords}")
       tweet = make_elite_tweet_for(search_keywords)

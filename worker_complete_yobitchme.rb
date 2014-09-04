@@ -44,8 +44,7 @@ def engage_by_elite_tweets
           ["WebDevelopment"], 
           ["angularjs"], ["javascript"], ["ubuntu"], ["smartwatch"], ["android", "wear"], ["moto360"], ["IFA2014"],
           ["ruby", "programming"] 
-        ],
-      10)
+        ])
   end
 
 end
@@ -95,11 +94,10 @@ def engage_by_search
                   ["#WebDevelopment"],
                   ["#angularjs"], ["#javascript"], ["#ubuntu"], ["#smartwatch"], 
                   ["#android", "#wear"], ["#moto360"], ["#IFA2014"],
-                  ["rubyonrails"], ["#backbonejs"], ["#apple", '#swift'], ["#python"], ["#lamp", "#php"],
-                  ["#startupchile"]
+                  ["rubyonrails"], ["#backbonejs"], ["#apple", '#swift'], ["#python"], ["#lamp", "#php"]
                ]
     lisa2.feast_on_keywords(keywords, 
-                              {:starrable => true, :retweetable => true, :clonable => true, :followable => false},
+                              {:starrable => true, :retweetable => true, :clonable => true, :followable => true},
                               "AND")
 
   end
@@ -121,7 +119,7 @@ end
 # Runs all engagement modes in different threads
 def engage
   threads = []
-  threads << LisaToolbox.run_in_new_thread(:engage_by_elite_tweets) {engage_by_elite_tweets}
+  #threads << LisaToolbox.run_in_new_thread(:engage_by_elite_tweets) {engage_by_elite_tweets}
   threads << LisaToolbox.run_in_new_thread(:engage_by_search) {engage_by_search}
   #threads << LisaToolbox.run_in_new_thread(:engage_by_realtime) {engage_by_realtime}
   threads.each { |thread| thread.join }
