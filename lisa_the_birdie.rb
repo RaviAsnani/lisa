@@ -555,6 +555,7 @@ class LisaTheBirdie
     raise if config[:parse][:application_id].nil? or config[:parse][:api_key].nil?
 
     default_config = {
+      :name => "Lisa",
       :auth => {
         :consumer_key => nil,
         :consumer_secret => nil,
@@ -693,7 +694,7 @@ class LisaTheBirdie
       }
     }
 
-    log(stats.to_json, "stats")
+    log(stats.to_json, "#{@config[:name]} : stats")
   end
 
 
@@ -1123,7 +1124,7 @@ class LisaTheBirdie
   def increment_bird_feed_usage(klass = nil)
     raise if klass == nil
     @limits[:actuals][klass] += 1
-    log(@limits[:actuals], "USAGE STATS")
+    log(@limits[:actuals], "#{@config[:name]} : USAGE STATS")
   end
 
 

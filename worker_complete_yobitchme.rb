@@ -21,7 +21,8 @@ def engage_by_elite_tweets
     elite_lisa = LisaTheEliteTweetMaker.new({
       :auth => $auth,
       :parse => $parse_auth,
-      :myself => "yobitchme"
+      :myself => "yobitchme",
+      :name => "Lisa Elite"
     })
  
     elite_lisa.make_elite_tweets_for_keyword_cloud(
@@ -59,6 +60,7 @@ def engage_by_search
 
     # Engage for ST, F, RT, Clone
     lisa2 = LisaTheBirdie.new({
+        :name => "Lisa Search",
         :auth => $auth,
         :parse => $parse_auth,
         :exclude => exclude_keywords,
@@ -76,25 +78,25 @@ def engage_by_search
   
     puts "\n\n=================Engage for ST, F, RT, Clone===================="
     keywords = [
-                  ["#design", "#typography"], ["#fonts"], ["#typeface"], ["#Design", "#photoshop"],
-                  ['#android'], ["#googleplay"],
-                  ['#marketing', '#seo'], ["#MarketingTips"],
+                  # ["#design", "#typography"], ["#fonts"], ["#typeface"], ["#Design", "#photoshop"],
+                  # ['#android'], ["#googleplay"],
+                  # ['#marketing', '#seo'], ["#MarketingTips"],
                   ['#growthhacking'],
-                  ['#android', "#app"], 
-                  ['#iphone', '#app'], 
-                  ["#iphone", "#jailbreak"],
-                  ["#app", "#development"],
-                  ['#startup'], ["#Entrepreneur"], ["#Venture", "#Capital"], ["#Crowdfunding", "startup"],
-                  ['#cloud', '#analytics'], 
-                  ["#windows", "#mobile"], ["#winmo"],
-                  ["#ycombinator"], ["#Startup", "#School"],
-                  ["#funding", "#invest"],
-                  ["#social", "#media"],
-                  ["#WebsiteDesign"],
-                  ["#WebDevelopment"],
-                  ["#angularjs"], ["#javascript"], ["#ubuntu"], ["#smartwatch"], 
-                  ["#android", "#wear"], ["#moto360"], ["#IFA2014"],
-                  ["rubyonrails"], ["#backbonejs"], ["#apple", '#swift'], ["#python"], ["#lamp", "#php"]
+                  # ['#android', "#app"], 
+                  # ['#iphone', '#app'], 
+                  # ["#iphone", "#jailbreak"],
+                  # ["#app", "#development"],
+                  # ['#startup'], ["#Entrepreneur"], ["#Venture", "#Capital"], ["#Crowdfunding", "startup"],
+                  # ['#cloud', '#analytics'], 
+                  # ["#windows", "#mobile"], ["#winmo"],
+                  # ["#ycombinator"], ["#Startup", "#School"],
+                  # ["#funding", "#invest"],
+                  # ["#social", "#media"],
+                  # ["#WebsiteDesign"],
+                  # ["#WebDevelopment"],
+                  # ["#angularjs"], ["#javascript"], ["#ubuntu"], ["#smartwatch"], 
+                  # ["#android", "#wear"], ["#moto360"], ["#IFA2014"],
+                  # ["rubyonrails"], ["#backbonejs"], ["#apple", '#swift'], ["#python"], ["#lamp", "#php"]
                ]
     lisa2.feast_on_keywords(keywords, 
                               {:starrable => true, :retweetable => true, :clonable => true, :followable => true},
@@ -107,7 +109,8 @@ end
 
 def engage_by_realtime
   lisa = LisaTheChattyBird.new({
-      :auth => $auth
+      :auth => $auth,
+      :name => "Lisa Realtime"
     })
 
   #lisa.start_chatting
@@ -119,9 +122,9 @@ end
 # Runs all engagement modes in different threads
 def engage
   threads = []
-  #threads << LisaToolbox.run_in_new_thread(:engage_by_elite_tweets) {engage_by_elite_tweets}
+  threads << LisaToolbox.run_in_new_thread(:engage_by_elite_tweets) {engage_by_elite_tweets}
   threads << LisaToolbox.run_in_new_thread(:engage_by_search) {engage_by_search}
-  #threads << LisaToolbox.run_in_new_thread(:engage_by_realtime) {engage_by_realtime}
+  threads << LisaToolbox.run_in_new_thread(:engage_by_realtime) {engage_by_realtime}
   threads.each { |thread| thread.join }
 end
 
