@@ -90,9 +90,9 @@ require "./lisa_the_birdie"
                     #["#design", "#typography"], ["#fonts"], ["#typeface"], ["#Design", "#photoshop"],
                     #['#android'], ["#googleplay"],
                     #['#marketing', '#seo'], ["#MarketingTips"],
-                    ['#growthhacking'],
+                    #['#growthhacking'],
                     #['#android', "#app"], 
-                    #['#iphone', '#app'], 
+                    ['#iphone', '#app'], 
                     #["#iphone", "#jailbreak"],
                     #["#app", "#development"],
                     #['#startup'], ["#Entrepreneur"], ["#Venture", "#Capital"], ["#Crowdfunding", "startup"],
@@ -110,7 +110,7 @@ require "./lisa_the_birdie"
                  ]
     $foo = lisa2.feast_on_keywords(keyword_set, 
                       {:starrable => true, :retweetable => true, :clonable => true, :followable => true}, 
-                      "AND", :real)
+                      "AND", :preview)
   }
 
 #end # End looper

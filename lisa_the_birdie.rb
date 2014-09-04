@@ -925,7 +925,7 @@ class LisaTheBirdie
 
     original_search_count = 0
     rate_limit(:search) {
-      search(search_text, :lang => @config[:lang]) do |tweet| 
+      search(search_text, {:lang => @config[:lang], :result_type => "recent"}) do |tweet| 
         original_search_count += 1
         #log(tweet, "TWEET")
         bird_food_item = process_tweet_for_any_interest(tweet, operations)

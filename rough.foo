@@ -59,8 +59,13 @@ Actions
 - Retweet : Outgoing + Incoming
 - Follow : Outgoing
 
+def foo(a, q)
+  puts a
+  puts q
+end
 
-
+foo(10, {:a => 1, :b => 2})
+foo(10, :a => 1, :b => 2)
 
 
 
