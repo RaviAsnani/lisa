@@ -420,7 +420,7 @@ class LisaTheChattyBird
 
   # When a tweet is received if mode==:general
   def on_general_tweet(object, friend_ids)
-    print "."
+    print "~"
     if object.is_a?(Twitter::Tweet) and friend_ids.index(object.user.id) != nil
       process_live_tweet(object)
     end      
@@ -582,7 +582,8 @@ class LisaTheBirdie
         :min_tweet_count => 1500,
         :account_age => 0
       },
-      :exclude => [] # Array of strings
+      :exclude => [], # Array of strings
+      :max_count_per_search => 100
     }
 
     @config = default_config.merge(config)
@@ -777,7 +778,8 @@ class LisaTheBirdie
     return false if check_hit?(:tweet_infested, tweet.id, :verbose) == true
     return false if is_bird_feed_usage_in_limit?(:clone) == false
 
-    clone_text = "#{tweet.text} via .@#{tweet.user.handle}"
+    # Attribute the tweet to an end user only if it already has a @mention. 100% clone it otherwise
+    clone_text = "#{tweet.text} via .@#{tweet.user.handle}" if tweet.text.index("@") != nil
     clone_text = "#{tweet.text}" if clone_text.length > 140 # revert back to original text if new length with "via .@foo" > 140
     
     #log("Cloning tweet (id=>#{tweet.id}) : [#{tweet.user.handle}] : #{clone_text}")
@@ -931,6 +933,8 @@ class LisaTheBirdie
         #log(tweet, "TWEET")
         bird_food_item = process_tweet_for_any_interest(tweet, operations)
         all_bird_food[tweet.id] = bird_food_item if bird_food_item != nil
+
+        break if original_search_count >= @config[:max_count_per_search] # Don't search more than what's requested
       end
     }
 
