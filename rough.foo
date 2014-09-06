@@ -34,38 +34,36 @@ Gem : http://rdoc.info/gems/twitter/Twitter/REST/Users#user_search-instance_meth
 
 AndroidBlog_br OR blog_android OR AndroidBlogNews
 
-nohup ./worker_chatty.rb > nohup_chatty.out 2>&1 &
 
-
-via_mention => tweet.index("via").nil? AND tweet.index("via") < tweet.index("@")
-
-Clone =>      +link +media +via_mention +tweet.id%2==rand(2)   # @mention will also ping the via_mentioned user :)
-Retweet =>    +link -mention +media +tweet.id%2==rand(2)    # perfect for retweeting
-Star =>       +link -mention +tweet.id%2==rand(2)
-
-TODO
-- Seems like this twitter app is not working. Create a new one
-- Realtime : Tweets are being picked up for all 3 - C+R+S - find why
-- Log management
-- Timer should be progressbar based
-- Combined engager
-- Global way of creating an exclusion list
-
-
-
-Actions
-- Star : Outgoing
-- Clone+Mention : Incoming + Outgoing
-- Retweet : Outgoing + Incoming
-- Follow : Outgoing
-
-def foo(a, q)
-  puts a
-  puts q
+Mail.deliver do
+  from     'hello@yobitch.me'
+  to       'maku@makuchaku.in'
+  subject  'Here is the image you wanted'
+  body     "Foo message"
 end
 
-foo(10, {:a => 1, :b => 2})
-foo(10, :a => 1, :b => 2)
+#seo AND #marketing filter:replies -RT since:2014-09-04 until:2014-09-06
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
