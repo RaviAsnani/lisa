@@ -17,13 +17,14 @@ $parse_auth = {
 
 
 def engage_by_elite_tweets
-  elite_lisa = LisaTheEliteTweetMaker.new({
-    :auth => $auth,
-    :parse => $parse_auth,
-    :myself => "ravi_asnani"
-  })
-
   LisaToolbox.looper do 
+    elite_lisa = LisaTheEliteTweetMaker.new({
+      :auth => $auth,
+      :parse => $parse_auth,
+      :myself => "ravi_asnani"
+    })
+
+  
     elite_lisa.make_elite_tweets_for_keyword_cloud(
         [
           ['food', 'delicious'],
@@ -49,24 +50,25 @@ end
 
 
 def engage_by_search
-  # Engage for ST, F, RT, Clone
-  lisa2 = LisaTheBirdie.new({
-      :auth => $auth,
-      :parse => $parse_auth,
-      :exclude => ["yobitchme", "Easy_Branches", "RachelMajor2000", 
-                    "gamedev", "indiedev", "Audiograbber", "buy", "deal", "biz"],
-      :lang => "en", 
-      :tweet => {
-        :min_retweet_count => 2, 
-        :min_star_count => 2,
-        :moderate_retweet_count => 3,
-        :moderate_star_count => 3,  
-        :high_retweet_count => 5,
-        :high_star_count => 5   # To get more starrable tweets into the honeypot :)
-      }      
-    })
-
   LisaToolbox.looper do
+    # Engage for ST, F, RT, Clone
+    lisa2 = LisaTheBirdie.new({
+        :auth => $auth,
+        :parse => $parse_auth,
+        :exclude => ["yobitchme", "Easy_Branches", "RachelMajor2000", 
+                      "gamedev", "indiedev", "Audiograbber", "buy", "deal", "biz"],
+        :lang => "en", 
+        :tweet => {
+          :min_retweet_count => 2, 
+          :min_star_count => 2,
+          :moderate_retweet_count => 3,
+          :moderate_star_count => 3,  
+          :high_retweet_count => 5,
+          :high_star_count => 5   # To get more starrable tweets into the honeypot :)
+        }      
+      })
+
+  
     lisa2.rate_limit(:looper_internal) {
       puts "\n\n=================Engage for ST, F, RT, Clone===================="
       keywords = [
@@ -104,7 +106,7 @@ def engage_by_realtime
     })
 
   #lisa.start_chatting
-  lisa.start_chatting_with_friends_of(["MASTERCHEFonFOX", "BBC_TopGear"])
+  lisa.start_chatting_with_friends_of(["MASTERCHEFonFOX", "BBC_TopGear", "fooddotcom", "chefsfeed"])
 end
 
 
