@@ -46,6 +46,23 @@ end
 
 
 
+def find_parent(lisa, tweet_id)
+  begin
+    tweet = lisa.client.status(tweet_id)
+  rescue
+    return nil
+  end
+  puts "[#{tweet.uri}, R?=#{tweet.reply?}] #{tweet.text}"
+  return tweet.reply? == true ? find_parent(lisa, tweet.in_reply_to_status_id) : tweet
+end
+
+t=[]; search_text = "#android AND #app filter:replies -RT since:2014-09-01 until:2014-09-06"
+lisa2.client.search(search_text, {:lang => "en", :result_type => "recent"}).each { |tweet| 
+  t << tweet
+  puts "----------------------------------"
+  find_parent(lisa2, tweet.id) if tweet.class != "".class
+  puts "----------------------------------"
+}
 
 
 
