@@ -40,10 +40,10 @@ def engage_by_elite_tweets
           ["honda"],
           ["electric", "cars"],
           ["hybrid", "cars"],
-          ["sushi"], ["grilled", "food"], ["salad"], ["johnny", "rockets"], ["lebanese", "food"], ["fat", "lulu"], ["pizza"],
+          ["sushi"], ["grilled", "food"], ["salad"], ["johnny", "rockets"], ["lebanese", "food"], ["fat", "lulu"], 
+          ["italian", "pizza"],
           ["pagani"], ["mclaren"], ["top", "gear"]
-        ],
-      10)
+        ])
   end
 end
 
@@ -65,7 +65,8 @@ def engage_by_search
           :moderate_star_count => 3,  
           :high_retweet_count => 5,
           :high_star_count => 5   # To get more starrable tweets into the honeypot :)
-        }      
+        },
+        :max_count_per_search => 200         
       })
 
   
@@ -89,11 +90,9 @@ def engage_by_search
                   ["mclaren"], 
                   ["top", "gear"]
                  ]
-      keywords.shuffle.each do |keyword_set|
-        lisa2.feast_on_keywords(keyword_set, 
+      lisa2.feast_on_keywords(keywords, 
                                 {:starrable => true, :retweetable => true, :clonable => true, :followable => false},
                                 "AND")
-      end
     }
   end
 end
