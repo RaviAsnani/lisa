@@ -778,9 +778,10 @@ class LisaTheBirdie
     return false if check_hit?(:tweet_infested, tweet.id, :verbose) == true
     return false if is_bird_feed_usage_in_limit?(:clone) == false
 
+    clone_text = tweet.text
     # Attribute the tweet to an end user only if it already has a @mention. 100% clone it otherwise
     clone_text = "#{tweet.text} via .@#{tweet.user.handle}" if tweet.text.index("@") != nil
-    clone_text = "#{tweet.text}" if clone_text.length > 140 # revert back to original text if new length with "via .@foo" > 140
+    clone_text = tweet.text if clone_text.length > 140 # revert back to original text if new length with "via .@foo" > 140
     
     #log("Cloning tweet (id=>#{tweet.id}) : [#{tweet.user.handle}] : #{clone_text}")
     log(tweet, "CLONE")
@@ -1246,6 +1247,101 @@ class LisaTheEliteTweetMaker
       text.gsub!(/#{keyword}/i, "##{keyword}")
     }
     return text
+  end
+
+end
+
+
+
+
+
+# Checks the conversations in realtime
+class LisaTheConversantBird
+  include LisaToolbox
+
+  def initialize(config_params = nil)
+    raise if config_params.nil?
+
+    @config_params = config_params
+    @lisa = LisaTheBirdie.new(config_params)
+    @conversation_queue = {}
+    @myself = @lisa.client.user.handle
+  end
+
+
+  # Starts watching conversations for a given keyword set
+  # keyword_set => [["a", "b"], ...]
+  def start_watching_conversations(keyword_set)
+    keyword_set.each { |keywords|
+      search_text = keywords.join(" AND ") + " filter:replies -RT -#{@myself}"
+      
+      rate_limit(:start_watching_conversations__search) {
+        puts search_text
+        @lisa.search(search_text, {:lang => "en", :result_type => "recent"}) do |tweet| 
+          #log tweet.text, "tweet"
+          parent_tweet = find_first_parent_tweet(tweet.id)          
+          #log parent_tweet.text, "parent" if not parent_tweet.nil?
+          if not parent_tweet.nil? \
+            and @conversation_queue[parent_tweet.id] == nil \
+            and is_conversation_worth_watching?(tweet, parent_tweet, keywords) == true
+              @conversation_queue[parent_tweet.id] = {:parent_tweet => parent_tweet, 
+                                                      :search_result_tweet => tweet, 
+                                                      :search_keywords => keywords}
+          end # if
+        end
+      } # rate_limit
+
+    } # each
+
+    return @conversation_queue
+  end
+
+
+
+  # As the method says, does all the needed checks
+  def is_conversation_worth_watching?(tweet, parent_tweet, keywords)
+    false_result = false
+
+    # We found a non-conversation
+    return false_result if parent_tweet.nil? or tweet.id == parent_tweet.id
+    puts "parent found"
+
+    # Someone is thanking the original tweeter - we don't want these tweets
+    return false_result if tweet.text.downcase.index("thank") != nil
+    puts "Not thanks"
+
+    # The parent tweet does not has any keywords of interest
+    keyword_match_count = 0
+    keywords.each {|keyword|
+      keyword_match_count += 1 if parent_tweet.text.index(keyword) != nil
+    }
+    return false_result if keyword_match_count == 0
+    puts "keyword found"
+
+    # Child tweet is almost the same as parent tweet
+    return false_result if (tweet.text.split(" ") - parent_tweet.text.split(" ")).length < 5
+    puts "parent != child"
+
+    # More than 3 hashtags? The original tweet might be an ad
+    return false_result if parent_tweet.hashtags.length > 3
+    puts "hashtags are ok"
+
+    return false_result if @lisa.is_followable?(parent_tweet.user) == false
+    puts "Parent is folowable\n\n"
+
+    return true
+  end
+
+
+  # Given a tweet_id, find it's parent tweet recursively. Else, return the tweet OR nil
+  def find_first_parent_tweet(tweet_id)
+    begin
+      tweet = @lisa.client.status(tweet_id)
+    rescue
+      return nil
+    end
+    puts "[#{tweet.uri}, R?=#{tweet.reply?}] #{tweet.text}"
+    return tweet.reply? == true ? find_first_parent_tweet(tweet.in_reply_to_status_id) : tweet    
   end
 
 end
