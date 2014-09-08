@@ -1380,15 +1380,15 @@ class LisaTheConversantBird
 
   # Given a tweet_id, find it's parent tweet recursively. Else, return the tweet OR nil
   def find_first_parent_tweet(tweet_id)
-    rate_limit(:find_first_parent_tweet) {
-      begin
+    begin
+      rate_limit(:find_first_parent_tweet__internal) {
         tweet = @lisa.client.status(tweet_id)
         puts "[#{tweet.uri}, R?=#{tweet.reply?}] #{tweet.text}"
         return (not tweet.nil? and tweet.reply? == true) ? find_first_parent_tweet(tweet.in_reply_to_status_id) : tweet    
-      rescue
-        return nil
-      end
-    }
+      }
+    rescue
+      return nil
+    end
   end
 
 
