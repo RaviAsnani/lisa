@@ -122,38 +122,42 @@ $lisa_conversation = LisaTheConversantBird.new({
   :auth => $auth,
   :parse => $parse_auth,
   :exclude => ["yobitchme", "Easy_Branches", "RachelMajor2000", 
-                "gamedev", "indiedev", "Audiograbber", "buy", "deal", "biz"],
+                "gamedev", "indiedev", "Audiograbber", "buy", "deal", "biz", 'skjain_05'],
   :user => {
-    :followers_to_friends_ratio => 0.3,
-    :min_followers_count => 500,
+    :followers_to_friends_ratio => 0.2,
+    :min_followers_count => 200,
     :min_star_count => 25,
-    :min_tweet_count => 1000,
+    :min_tweet_count => 300,
     :account_age => 0
-  }      
+  },
+  :max_count_per_search => 50 ,
+  :deliver_conversations_to => "maku@makuchaku.in"    
 })
 
  conversations = $lisa_conversation.start_watching_conversations([
-  ["#design", "#typography"], ["#fonts"], ["#typeface"], ["#Design", "#photoshop"],
-  ['#android'], ["#googleplay"],
-  ['#marketing', '#seo'], ["#MarketingTips"],
-  ['#growthhacking'],
-  ['#android', "#app"], 
-  ['#iphone', '#app'], 
-  ["#iphone", "#jailbreak"],
-  ["#app", "#development"],
-  ['#startup'], 
-  ["#Entrepreneur"], ["#Venture", "#Capital"], ["#Crowdfunding", "startup"],
-  ['#cloud', '#analytics'], 
-  ["#windows", "#mobile"], ["#winmo"],
-  ["#ycombinator"], ["#Startup", "#School"],
-  ["#funding", "#invest"],
-  ["#social", "#media"],
-  ["#WebsiteDesign"],
-  ["#WebDevelopment"],
-  ["#angularjs"], ["#javascript"], ["#ubuntu"], ["#smartwatch"], 
-  ["#android", "#wear"], ["#moto360"], ["#IFA2014"],
-  ["rubyonrails"], ["#backbonejs"], ["#apple", '#swift'], ["#python"], ["#lamp", "#php"],
-  ["#startupchile"]
+    # ["#design", "#typography"], ["#fonts"], ["#typeface"], ["#Design", "#photoshop"],
+    # ['#android'], ["#googleplay"],
+    # ['#marketing', '#seo'], ["#MarketingTips"],
+    # ['#growthhacking'],
+    # ['#android', "#app"], 
+    # ['#iphone', '#app'], 
+    # ["#iphone", "#jailbreak"],
+    # ["#app", "#development"],
+    # ['#startup'], 
+    # ["#Entrepreneur"], ["#Venture", "#Capital"], ["#Crowdfunding", "startup"],
+    # ['#cloud', '#analytics'], 
+    # ["#windows", "#mobile"], ["#winmo"],
+    # ["#ycombinator"], ["#Startup", "#School"],
+    # ["#funding", "#invest"],
+    # ["#social", "#media"],
+    # ["#WebsiteDesign"],
+    # ["#WebDevelopment"],
+    # ["#angularjs"], ["#javascript"], ["#ubuntu"], ["#smartwatch"], 
+    # ["#android", "#wear"], ["#moto360"], ["#IFA2014"],
+    # ["rubyonrails"], ["#backbonejs"], ["#apple", '#swift'], ["#python"], ["#lamp", "#php"],
+    # ["#startupchile"]
+    ['#rahulgandhi']
+    #['#soniagandhi'], ['#narendra', '#modi'], ['#congress', '#party'], ['#india', '#politics']
  ])
 
  pp conversations

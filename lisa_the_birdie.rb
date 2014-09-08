@@ -5,6 +5,7 @@ require "pp"
 require "google-search"     # used for image search
 require "cgi"               # for unescaping html entities
 require "googl"
+require "mail"
 
 require "./libs/google/curbemu.rb"
 require "./libs/google/ruby-web-search.rb"
@@ -143,6 +144,7 @@ module LisaToolbox
     system("echo '#{data}' >> #{klass.to_s}.txt")
   end
 
+  # returns true if data was found for the klass
   def check_hit?(klass, data, verbosity=:silent)
     print "."
     command = "grep '#{data}' #{klass.to_s}.txt 1>/dev/null"
@@ -164,6 +166,20 @@ module LisaToolbox
     random_x_percentage = rand(x_percentage)
     return (base + (random_x_percentage*base/100)).to_i
   end
+
+
+  # Send the email
+  def mail(from, to, subject, body)
+    raise if from.nil? or to.nil? or subject.nil? or body.nil?
+
+    # Send the email now
+    Mail.deliver do
+      from     from
+      to       to
+      subject  subject
+      body     body
+    end
+  end  
 
 
 end
@@ -1107,7 +1123,6 @@ class LisaTheBirdie
     return false if friends_to_followers_ratio < 0.2 # Anyone who is not following back is practially a company/celebrity
 
     if followers_to_friends_ratio >= @config[:user][:followers_to_friends_ratio]  \
-        and stars_count >= @config[:user][:min_star_count] \
         and tweets_count >= @config[:user][:min_tweet_count] \
         and followers_count >= @config[:user][:min_followers_count]  \
         and account_age >= @config[:user][:account_age]
@@ -1260,11 +1275,11 @@ class LisaTheConversantBird
   include LisaToolbox
 
   def initialize(config_params = nil)
-    raise if config_params.nil?
+    raise if config_params.nil? or config_params[:deliver_conversations_to].nil?
 
-    @config_params = config_params
-    @lisa = LisaTheBirdie.new(config_params)
-    @conversation_queue = {}
+    @config = config_params
+    @lisa = LisaTheBirdie.new(@config)
+    @conversations = {} # {tweet_id => {}, ...}
     @myself = @lisa.client.user.handle
   end
 
@@ -1275,25 +1290,31 @@ class LisaTheConversantBird
     keyword_set.each { |keywords|
       search_text = keywords.join(" AND ") + " filter:replies -RT -#{@myself}"
       
+      # Search
       rate_limit(:start_watching_conversations__search) {
         puts search_text
+        original_search_count = 0
         @lisa.search(search_text, {:lang => "en", :result_type => "recent"}) do |tweet| 
-          #log tweet.text, "tweet"
+          log tweet.text, "tweet"
           parent_tweet = find_first_parent_tweet(tweet.id)          
           #log parent_tweet.text, "parent" if not parent_tweet.nil?
           if not parent_tweet.nil? \
-            and @conversation_queue[parent_tweet.id] == nil \
+            and @conversations[parent_tweet.id] == nil \
             and is_conversation_worth_watching?(tweet, parent_tweet, keywords) == true
-              @conversation_queue[parent_tweet.id] = {:parent_tweet => parent_tweet, 
+              @conversations[parent_tweet.id] = {:parent_tweet => parent_tweet, 
                                                       :search_result_tweet => tweet, 
                                                       :search_keywords => keywords}
           end # if
-        end
+
+          original_search_count += 1
+          break if original_search_count >= @config[:max_count_per_search]
+        end # search
       } # rate_limit
 
     } # each
 
-    return @conversation_queue
+    deliver_conversations(@conversations)
+    return @conversations
   end
 
 
@@ -1302,46 +1323,64 @@ class LisaTheConversantBird
   def is_conversation_worth_watching?(tweet, parent_tweet, keywords)
     false_result = false
 
-    # We found a non-conversation
-    return false_result if parent_tweet.nil? or tweet.id == parent_tweet.id
-    puts "parent found"
+    # Don't process any further if the parent_tweet.id conversation is already delivered
+    return false_result if check_hit?(:conversations, parent_tweet.id) == true
 
-    # Someone is thanking the original tweeter - we don't want these tweets
-    return false_result if tweet.text.downcase.index("thank") != nil
-    puts "Not thanks"
+    rate_limit(:is_conversation_worth_watching) {
+      # We found a non-conversation
+      return false_result if parent_tweet.nil? or tweet.id == parent_tweet.id
+      puts "parent found"
 
-    # The parent tweet does not has any keywords of interest
-    keyword_match_count = 0
-    keywords.each {|keyword|
-      keyword_match_count += 1 if parent_tweet.text.index(keyword) != nil
+      # Someone is thanking the original tweeter - we don't want these tweets
+      return false_result if tweet.text.downcase.index("thank") != nil
+      puts "Not thanks"
+
+      # The parent tweet does not has any keywords of interest
+      keyword_match_count = 0
+      keywords.each {|keyword|
+        keyword_match_count += 1 if parent_tweet.text.downcase.index(keyword.downcase) != nil
+      }
+      return false_result if keyword_match_count < 1 # ensure that atleast one keyword was found in the parent tweet
+      puts "keyword found in parent"
+
+      # Child tweet is almost the same as parent tweet
+      return false_result if (tweet.text.split(" ") - parent_tweet.text.split(" ")).length < 5
+      puts "parent != child"
+
+      # More than 3 hashtags? The original tweet might be an ad
+      return false_result if parent_tweet.hashtags.length > 3
+      puts "hashtags are ok"
+
+      #return false_result if @lisa.is_followable?(parent_tweet.user) == false
+      #puts "Parent is folowable\n\n"
+
+      puts "All OK"
+      return true
     }
-    return false_result if keyword_match_count == 0
-    puts "keyword found"
 
-    # Child tweet is almost the same as parent tweet
-    return false_result if (tweet.text.split(" ") - parent_tweet.text.split(" ")).length < 5
-    puts "parent != child"
-
-    # More than 3 hashtags? The original tweet might be an ad
-    return false_result if parent_tweet.hashtags.length > 3
-    puts "hashtags are ok"
-
-    return false_result if @lisa.is_followable?(parent_tweet.user) == false
-    puts "Parent is folowable\n\n"
-
-    return true
+    return false_result
   end
 
 
   # Given a tweet_id, find it's parent tweet recursively. Else, return the tweet OR nil
   def find_first_parent_tweet(tweet_id)
-    begin
+    rate_limit(:find_first_parent_tweet) {
       tweet = @lisa.client.status(tweet_id)
-    rescue
-      return nil
-    end
-    puts "[#{tweet.uri}, R?=#{tweet.reply?}] #{tweet.text}"
-    return tweet.reply? == true ? find_first_parent_tweet(tweet.in_reply_to_status_id) : tweet    
+      puts "[#{tweet.uri}, R?=#{tweet.reply?}] #{tweet.text}"
+      return (not tweet.nil? and tweet.reply? == true) ? find_first_parent_tweet(tweet.in_reply_to_status_id) : tweet    
+    }
+  end
+
+
+  # Emails the conversations
+  def deliver_conversations(conversations)
+    # Record all outgoing conversations
+    conversations.keys.each { |tweet_id|
+      record_hit(:conversations, tweet_id)
+    }
+
+    mail("hello@yobitch.me", @config[:deliver_conversations_to], 
+          "Important conversations to engage with on Twitter", conversations.to_json)
   end
 
 end
