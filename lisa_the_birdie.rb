@@ -1287,13 +1287,13 @@ class LisaTheConversantBird
   # Starts watching conversations for a given keyword set
   # keyword_set => [["a", "b"], ...]
   def start_watching_conversations(keyword_set)
-    keyword_set.each { |keywords|
+    keyword_set.shuffle.each { |keywords|
       search_text = keywords.join(" AND ") + " filter:replies -RT -#{@myself}"
       
       # Search
       rate_limit(:start_watching_conversations__search) {
-        puts search_text
-        original_search_count = 0
+        log search_text, "searching"
+        search_tweet_count = 0
         @lisa.search(search_text, {:lang => "en", :result_type => "recent"}) do |tweet| 
           log tweet.text, "tweet"
           parent_tweet = find_first_parent_tweet(tweet.id)          
@@ -1306,8 +1306,8 @@ class LisaTheConversantBird
                                                       :search_keywords => keywords}
           end # if
 
-          original_search_count += 1
-          break if original_search_count >= @config[:max_count_per_search]
+          search_tweet_count += 1
+          break if search_tweet_count >= @config[:max_count_per_search]
         end # search
       } # rate_limit
 
@@ -1348,7 +1348,7 @@ class LisaTheConversantBird
       puts "parent != child"
 
       # More than 3 hashtags? The original tweet might be an ad
-      return false_result if parent_tweet.hashtags.length > 3
+      return false_result if parent_tweet.hashtags.length > 4
       puts "hashtags are ok"
 
       #return false_result if @lisa.is_followable?(parent_tweet.user) == false
@@ -1378,6 +1378,8 @@ class LisaTheConversantBird
 
   # Emails the conversations
   def deliver_conversations(conversations)
+    return if conversations.keys.length == 0
+
     # Record all outgoing conversations
     conversations.keys.each { |tweet_id|
       record_hit(:conversations, tweet_id)
