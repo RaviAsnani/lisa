@@ -22,8 +22,8 @@
             </table>
           </div>
           <div class="content">
-            <table bgcolor="">
-              <% conversations.each do |tweet_id, conversation| %>
+            <table bgcolor="" style="border:1px solid #efefef">
+              <% @conversations.each do |tweet_id, conversation| %>
                 <% user = conversation[:parent_tweet].user %>
                 <% parent_tweet = conversation[:parent_tweet] %>
                 <tr>
@@ -31,22 +31,18 @@
                     <a href="http://twitter.com/<%= user.handle %>"><img src="<%= user.profile_image_uri.to_s %>"/></a>
                   </td>
                   <td>
-                    <h4>@<%= user.handle %> <small>RT:<%= parent_tweet.retweet_count %>, ST:<% parent_tweet.favorite_count %></small></h4>
+                    <h4>@<%= user.handle %> 
+                      <small>
+                        Retweets : <%= parent_tweet.retweet_count %>, &nbsp;
+                        Favorites : <% parent_tweet.favorite_count %>, &nbsp;
+                        User Followers : <%= user.followers_count %>
+                      </small>
+                    </h4>
                     <p class=""><%= parent_tweet.text %></p>
                     <a class="btn" href="<%= parent_tweet.uri.to_s %>">Open conversation &raquo;</a>
                   </td>                  
                 </tr>
               <% end %>
-<!--               <tr>
-                <td class="small" width="20%" style="vertical-align: top; padding-right:10px;">
-                  <img src="http://placehold.it/75x75"/>
-                </td>
-                <td>
-                  <h4>@<%= user.handle %> <small>This is a note.</small></h4>
-                  <p class=""><%= conversation[:parent_tweet].text %></p>
-                  <a class="btn" href="<%= conversation[:parent_tweet].to_s %>">Open conversation &raquo;</a>
-                </td>
-              </tr> -->
             </table>
           </div>
         </td>
