@@ -5,12 +5,28 @@ require "pp"
 require "google-search"     # used for image search
 require "cgi"               # for unescaping html entities
 require "googl"
-require "mail"
+require "action_mailer"
 
 require "./libs/google/curbemu.rb"
 require "./libs/google/ruby-web-search.rb"
 require "./libs/maku/google_image_search.rb"
 
+ActionMailer::Base.raise_delivery_errors = true
+ActionMailer::Base.delivery_method = :smtp
+ActionMailer::Base.view_paths = File.expand_path('../', __FILE__)
+
+
+# http://excid3.com/blog/using-actionmailer-without-rails/
+class LisaMailer < ActionMailer::Base
+  default from: "hello@yobitch.me`"
+
+  def important_conversations(from, to, subject, conversations)
+    @conversations = conversations
+    mail(to: to, from: from, subject: subject) do |format|
+      format.html
+    end
+  end
+end
 
 
 
@@ -169,17 +185,17 @@ module LisaToolbox
 
 
   # Send the email
-  def mail(from, to, subject, body)
-    raise if from.nil? or to.nil? or subject.nil? or body.nil?
+  # def mail(from, to, subject, body)
+  #   raise if from.nil? or to.nil? or subject.nil? or body.nil?
 
-    # Send the email now
-    Mail.deliver do
-      from     from
-      to       to
-      subject  subject
-      body     body
-    end
-  end  
+  #   # Send the email now
+  #   Mail.deliver do
+  #     from     from
+  #     to       to
+  #     subject  subject
+  #     body     body
+  #   end
+  # end  
 
 
 end
@@ -1385,8 +1401,10 @@ class LisaTheConversantBird
       record_hit(:conversations, tweet_id)
     }
 
-    mail("hello@yobitch.me", @config[:deliver_conversations_to], 
-          "Important conversations to engage with on Twitter", conversations.to_json)
+    LisaMailer.important_conversations("hello@yobitch.me", @config[:deliver_conversations_to], 
+                  "Important conversations to engage with on Twitter", conversations).deliver
+    # mail("hello@yobitch.me", @config[:deliver_conversations_to], 
+    #       "Important conversations to engage with on Twitter", conversations.to_json)
   end
 
 end
