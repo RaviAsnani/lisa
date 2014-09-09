@@ -144,7 +144,8 @@ $lisa_conversation = LisaTheConversantBird.new({
     :min_tweet_count => 300,
     :account_age => 0
   },
-  :max_count_per_search => 2,
+  :max_count_per_search => 100,
+  :max_results_per_search => 2,
   :deliver_conversations_to => "maku@makuchaku.in"    
 })
 

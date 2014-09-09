@@ -1310,7 +1310,8 @@ class LisaTheConversantBird
       rate_limit(:start_watching_conversations__search) {
         log search_text, "searching"
         search_tweet_count = 0
-        @lisa.search(search_text, {:lang => "en", :result_type => "recent"}) do |tweet| 
+        @lisa.search(search_text, {:lang => "en", :result_type => "recent"}) do |tweet|
+          max_results_per_search = 0 
           log tweet.text, "tweet"
           parent_tweet = find_first_parent_tweet(tweet.id)          
           #log parent_tweet.text, "parent" if not parent_tweet.nil?
@@ -1320,8 +1321,14 @@ class LisaTheConversantBird
               @conversations[parent_tweet.id] = {:parent_tweet => parent_tweet, 
                                                       :search_result_tweet => tweet, 
                                                       :search_keywords => keywords}
+
+            # Collect only those many search results which were asked 
+            max_results_per_search += 1                                       
+            log "max_results_per_search hit for #{search_text}", "max_results_per_search"  
+            break if max_results_per_search >= @config[:max_results_per_search]
           end # if
 
+          # Search for only those many results as requested
           search_tweet_count += 1
           break if search_tweet_count >= @config[:max_count_per_search]
         end # search
