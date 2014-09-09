@@ -156,8 +156,8 @@ $lisa_conversation = LisaTheConversantBird.new({
     # ["#android", "#wear"], ["#moto360"], ["#IFA2014"],
     # ["rubyonrails"], ["#backbonejs"], ["#apple", '#swift'], ["#python"], ["#lamp", "#php"],
     # ["#startupchile"]
-    ['rahulgandhi'], ['soniagandhi'], 
-    ['narendra', 'modi'], ["narendramodi"], ['india', 'politics']
+    ['iphone', 'app'], ['social', 'media'], 
+    #['narendra', 'modi'], ["narendramodi"], ['india', 'politics']
  ])
 
  pp conversations

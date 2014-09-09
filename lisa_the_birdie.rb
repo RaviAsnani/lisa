@@ -113,7 +113,7 @@ module LisaToolbox
     rescue Exception => e
       puts "Got generic exception..."
       puts e
-      puts e.backtrace
+      puts e.backtrace      
     end
   end  
 
@@ -1396,15 +1396,13 @@ class LisaTheConversantBird
   def deliver_conversations(conversations)
     return if conversations.keys.length == 0
 
+    LisaMailer.important_conversations("hello@yobitch.me", @config[:deliver_conversations_to], 
+                  "Important conversations to engage with on Twitter", conversations).deliver
+
     # Record all outgoing conversations
     conversations.keys.each { |tweet_id|
       record_hit(:conversations, tweet_id)
-    }
-
-    LisaMailer.important_conversations("hello@yobitch.me", @config[:deliver_conversations_to], 
-                  "Important conversations to engage with on Twitter", conversations).deliver
-    # mail("hello@yobitch.me", @config[:deliver_conversations_to], 
-    #       "Important conversations to engage with on Twitter", conversations.to_json)
+    }    
   end
 
 end

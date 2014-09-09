@@ -26,7 +26,7 @@
               <% @conversations.each do |tweet_id, conversation| %>
                 <% user = conversation[:parent_tweet].user %>
                 <% parent_tweet = conversation[:parent_tweet] %>
-                <tr style="border:1px solid #efefef">
+                <tr style="border:1px solid #efefef; background:#efefef;">
                   <td class="small" width="20%" style="vertical-align: top; padding-right:10px;">
                     <a href="http://twitter.com/<%= user.handle %>"><img src="<%= user.profile_image_uri.to_s %>"/></a>
                   </td>
