@@ -27,8 +27,11 @@
                 <% user = conversation[:parent_tweet].user %>
                 <% parent_tweet = conversation[:parent_tweet] %>
                 <tr style="border:1px solid #efefef; background:#efefef;">
-                  <td class="small" width="20%" style="vertical-align: top; padding-right:10px;">
-                    <a href="http://twitter.com/<%= user.handle %>"><img src="<%= user.profile_image_uri.to_s %>"/></a>
+                  <td class="small" width="20%" style="padding-left:34px;">
+                    <a href="http://twitter.com/<%= user.handle %>">
+                      <img style="width:150px;" src="<%= user.profile_image_uri.to_s %>"/>
+                      <div>@<%= user.handle %></div>
+                    </a>
                   </td>
                   <td>
                     <h4>@<%= user.handle %> 
@@ -40,7 +43,7 @@
                     </h4>
                     <p class=""><%= parent_tweet.text %></p>
                     <a class="btn" href="<%= parent_tweet.uri.to_s %>">Open conversation &raquo;</a>
-                    <p><small>Tags : <%= conversation[:search_keywords] %></small></p>
+                    <p><small>Tags : <%= conversation[:search_keywords].join(", ") %></small></p>
                   </td>                  
                 </tr>
               <% end %>
