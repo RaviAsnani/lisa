@@ -49,12 +49,26 @@ require "./lisa_the_birdie"
 
 
 
+# YB
+# $auth = {
+#   :consumer_key => '07y02Rx3pjpVlAqmwiLZeONBQ',
+#   :consumer_secret =>'SFN4ennNrCRu8eL7piWRRvJrpupi8IV5dDcN3gnPcms97LlRAt',
+#   :token =>'2592724712-sATvge1OdeqOd1zpE2riTKpiPaCmn0o3Jarnppe',
+#   :secret => 'XtH5VQKXVURUDfQ0GPqxrcYO4wGMqdUcLnF26PP0YoVz0'
+# }
 
+# $parse_auth = {
+#   :application_id => "ZkdRD4LbeKFxkaviTOmOY29eQ6VaPNV4h96N4qXV",
+#   :api_key => "yVnIz9AoDA3XlZPEMlG7tR9icMdcimm6Cvdxlush" 
+# }
+
+
+# RAVI
 $auth = {
-  :consumer_key => '07y02Rx3pjpVlAqmwiLZeONBQ',
-  :consumer_secret =>'SFN4ennNrCRu8eL7piWRRvJrpupi8IV5dDcN3gnPcms97LlRAt',
-  :token =>'2592724712-sATvge1OdeqOd1zpE2riTKpiPaCmn0o3Jarnppe',
-  :secret => 'XtH5VQKXVURUDfQ0GPqxrcYO4wGMqdUcLnF26PP0YoVz0'
+  :consumer_key => 'xSk9IoxQbnxKbw0ebjuJ6sV5o',
+  :consumer_secret =>'Lyp1xWyReu7kgday1QOR7XN3JMA9OrB7LvBooKs3shciWimqat',
+  :token =>'137607844-Gzmkt1zs696XZnX3GpyT7Lba2rT7E6TAIORxA9LU',
+  :secret => '29eTALhvojnN3uRRqBTnI8k6Ej1pbDU0XhFjAS9vuui44'
 }
 
 $parse_auth = {
