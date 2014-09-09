@@ -186,7 +186,8 @@ $lisa_conversation = LisaTheConversantBird.new({
     ["hybrid", "cars"],
     ["sushi"], ["grilled", "food"], ["salad"], ["johnny", "rockets"], ["lebanese", "food"], ["fat", "lulu"], 
     ["italian", "pizza"],
-    ["pagani"], ["mclaren"], ["top", "gear"]    
+    ["pagani"], ["mclaren"], 
+    ["top", "gear"]    
  ])
 
  pp conversations
