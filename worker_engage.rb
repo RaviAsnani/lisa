@@ -130,34 +130,32 @@ $lisa_conversation = LisaTheConversantBird.new({
     :min_tweet_count => 300,
     :account_age => 0
   },
-  :max_count_per_search => 50 ,
+  :max_count_per_search => 5 ,
   :deliver_conversations_to => "maku@makuchaku.in"    
 })
 
  conversations = $lisa_conversation.start_watching_conversations([
-    # ["#design", "#typography"], ["#fonts"], ["#typeface"], ["#Design", "#photoshop"],
-    # ['#android'], ["#googleplay"],
-    # ['#marketing', '#seo'], ["#MarketingTips"],
-    # ['#growthhacking'],
-    # ['#android', "#app"], 
-    # ['#iphone', '#app'], 
-    # ["#iphone", "#jailbreak"],
-    # ["#app", "#development"],
-    # ['#startup'], 
-    # ["#Entrepreneur"], ["#Venture", "#Capital"], ["#Crowdfunding", "startup"],
-    # ['#cloud', '#analytics'], 
-    # ["#windows", "#mobile"], ["#winmo"],
-    # ["#ycombinator"], ["#Startup", "#School"],
-    # ["#funding", "#invest"],
-    # ["#social", "#media"],
-    # ["#WebsiteDesign"],
-    # ["#WebDevelopment"],
-    # ["#angularjs"], ["#javascript"], ["#ubuntu"], ["#smartwatch"], 
-    # ["#android", "#wear"], ["#moto360"], ["#IFA2014"],
-    # ["rubyonrails"], ["#backbonejs"], ["#apple", '#swift'], ["#python"], ["#lamp", "#php"],
-    # ["#startupchile"]
-    ['iphone', 'app'], ['social', 'media'], 
-    #['narendra', 'modi'], ["narendramodi"], ['india', 'politics']
+    ["#design", "#typography"], ["#fonts"], ["#typeface"], ["#Design", "#photoshop"],
+    ['#android'], ["#googleplay"],
+    ['#marketing', '#seo'], ["#MarketingTips"],
+    ['#growthhacking'],
+    ['#android', "#app"], 
+    ['#iphone', '#app'], 
+    ["#iphone", "#jailbreak"],
+    ["#app", "#development"],
+    ['#startup'], 
+    ["#Entrepreneur"], ["#Venture", "#Capital"], ["#Crowdfunding", "startup"],
+    ['#cloud', '#analytics'], 
+    ["#windows", "#mobile"], ["#winmo"],
+    ["#ycombinator"], ["#Startup", "#School"],
+    ["#funding", "#invest"],
+    ["#social", "#media"],
+    ["#WebsiteDesign"],
+    ["#WebDevelopment"],
+    ["#angularjs"], ["#javascript"], ["#ubuntu"], ["#smartwatch"], 
+    ["#android", "#wear"], ["#moto360"], ["#IFA2014"],
+    ["rubyonrails"], ["#backbonejs"], ["#apple", '#swift'], ["#python"], ["#lamp", "#php"],
+    ["#startupchile"]
  ])
 
  pp conversations

@@ -1397,7 +1397,7 @@ class LisaTheConversantBird
     return if conversations.keys.length == 0
 
     LisaMailer.important_conversations("hello@yobitch.me", @config[:deliver_conversations_to], 
-                  "Important conversations to engage with on Twitter", conversations).deliver
+                  "Important conversations to engage with on Twitter for #{Time.now}", conversations).deliver
 
     # Record all outgoing conversations
     conversations.keys.each { |tweet_id|
