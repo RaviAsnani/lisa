@@ -40,6 +40,7 @@
                     </h4>
                     <p class=""><%= parent_tweet.text %></p>
                     <a class="btn" href="<%= parent_tweet.uri.to_s %>">Open conversation &raquo;</a>
+                    <p><small>Tags : <%= conversation[:search_keywords] %></small></p>
                   </td>                  
                 </tr>
               <% end %>
