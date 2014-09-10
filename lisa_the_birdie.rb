@@ -1021,7 +1021,7 @@ class LisaTheBirdie
 
       # If tweet is not a retweet or not a reply & has no pronouns
       if tweet.reply? == false and tweet.retweet? == false
-        pronouns = [" i ", "i'm", "am", 'we', 'me', 'you', 'he', 'she', 'they', 'him', 'her']
+        pronouns = ["i ", "i'm", "am", 'we', 'me']
         if Regexp.new(pronouns.join("|")).match(tweet.text.downcase) != nil
           log tweet, "yahoo"
           return true 
