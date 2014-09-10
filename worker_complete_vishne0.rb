@@ -101,7 +101,7 @@ def engage_by_realtime
     })
 
   #lisa.start_chatting
-  lisa.start_chatting_with_friends_of(["CindyMurph", "SANSInstitute", "jameslyne"])
+  lisa.start_chatting_with_friends_of(["tomshardware", "SANSInstitute", "anandshimpi"])
 end
 
 
