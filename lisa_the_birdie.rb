@@ -123,7 +123,7 @@ module LisaToolbox
     prefix.upcase!
     timestamp = Time.now.to_s.split(" ")[0..1].join(" ")
     if object.is_a?(Twitter::Tweet)
-      pre = "[#{prefix}] [#{timestamp}] [ST:#{object.favorite_count}, RT:#{object.retweet_count}, urls?:#{object.urls?}, media?:#{object.media?}, @M?:#{object.user_mentions?}] : [@#{object.user.id}:#{object.user.handle}]"
+      pre = "[#{prefix}] [#{timestamp}] [ST:#{object.favorite_count}, RT?:#{object.retweet?}, RT:#{object.retweet_count}, urls?:#{object.urls?}, media?:#{object.media?}, @M?:#{object.user_mentions?}, @Re?:#{object.reply?}] : [#{object.user.id}:@#{object.user.handle}]"
       puts "\n=> #{pre} => #{object.text}" 
     elsif object.is_a?(Twitter::User)
       pre = "[#{prefix}] [#{timestamp}] [Fo:#{object.followers_count}, Fr:#{object.friends_count}, \
@@ -463,7 +463,7 @@ class LisaTheChattyBird
 
   # Push the live tweets into an queue for later processing
   def process_live_tweet(tweet)
-    #log(tweet)
+    log(tweet)
     if @lisa.is_tweet_of_basic_interest?(tweet, :live) == true
       # log(tweet)
 
@@ -492,6 +492,8 @@ class LisaTheChattyBird
           food_item.get_primary_operations.each { |operation|
             if operation == :follow
               @lisa.send(operation, food_item.stuff.user, true, :real)
+            elsif operation == :clone
+              @lisa.send(operation, food_item.stuff, :real, true) # don't use the @via mention
             else
               @lisa.send(operation, food_item.stuff, :real)
             end
@@ -803,16 +805,21 @@ class LisaTheBirdie
 
 
   # NOTE - Actually does the clone
-  def clone(tweet, mode = :real)
+  def clone(tweet, mode = :real, include_via = true)
     return false if check_hit?(:tweet_infested, tweet.id, :verbose) == true
     return false if is_bird_feed_usage_in_limit?(:clone) == false
 
     clone_text = tweet.text
-    # Attribute the tweet to an end user only if it already has a @mention. 100% clone it otherwise
-    clone_text = "#{tweet.text} via .@#{tweet.user.handle}" if tweet.text.index("@") != nil
-    clone_text = tweet.text if clone_text.length > 140 # revert back to original text if new length with "via .@foo" > 140
+
+    if include_via == true
+      # Attribute the tweet to an end user only if it already has a @mention. 100% clone it otherwise
+      clone_text = "#{tweet.text} via @#{tweet.user.handle}" if tweet.text.index("@") != nil
+      clone_text = tweet.text if clone_text.length > 140 # revert back to original text if new length with "via .@foo" > 140
+    end
     
     #log("Cloning tweet (id=>#{tweet.id}) : [#{tweet.user.handle}] : #{clone_text}")
+    clone_text.gsub!(".@", "@") # first convert all .@ to @ to bring consistency
+    clone_text.gsub!("@", ".@") # then convert all @ to .@
     log(tweet, "CLONE")
     return if mode == :preview
 
@@ -1008,9 +1015,19 @@ class LisaTheBirdie
 
     # Only if the tweet has a url AND (is either a via tweet or is not a mention)
     if mode == :live
-      if tweet.urls? == true # and is_no_mention_or_via_mention_tweet?(tweet) == true
-        return true
+      # if tweet.urls? == true # and is_no_mention_or_via_mention_tweet?(tweet) == true
+      #   return true
+      # end
+
+      # If tweet is not a retweet or not a reply & has no pronouns
+      if tweet.reply? == false and tweet.retweet? == false
+        pronouns = [" i ", "i'm", "am", 'we', 'me', 'you', 'he', 'she', 'they', 'him', 'her']
+        if Regexp.new(pronouns.join("|")).match(tweet.text.downcase) != nil
+          log tweet, "yahoo"
+          return true 
+        end
       end
+      return false
     end
 
     # default
@@ -1049,9 +1066,7 @@ class LisaTheBirdie
     end
 
     if mode == :live
-      # Should not be a mention
-      if tweet.user_mentions? == false \
-          and is_randomly_infestable_tweet?(tweet) == true
+      if is_randomly_infestable_tweet?(tweet) == true
         return true
       end
     end      
@@ -1076,9 +1091,7 @@ class LisaTheBirdie
 
     if mode == :live
       # Should have media
-      # Should not have user mentions
       if tweet.media? == true \
-          and tweet.user_mentions? == false \
           and is_randomly_infestable_tweet?(tweet) == true
         return true
       end
@@ -1102,10 +1115,8 @@ class LisaTheBirdie
     end
 
     if mode == :live
-      # Should have media
-      # Should be either no mention or a via mention
-      if tweet.media? == true \
-          and is_no_mention_or_via_mention_tweet?(tweet) == true \
+      # Should have no media
+      if tweet.media? == false \
           and is_randomly_infestable_tweet?(tweet) == true
         return true
       end

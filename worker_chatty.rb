@@ -15,4 +15,4 @@ lisa = LisaTheChattyBird.new({
   })
 
 #lisa.start_chatting
-lisa.start_chatting_with_friends_of(["pjain"])
+lisa.start_chatting_with_friends_of(["pjain", "makuchaku", "500startups"])
