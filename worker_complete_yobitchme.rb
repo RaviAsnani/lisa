@@ -44,7 +44,15 @@ def engage_by_elite_tweets
           ["WebsiteDesign"],
           ["WebDevelopment"], 
           ["angularjs"], ["javascript"], ["ubuntu"], ["smartwatch"], ["android", "wear"], ["moto360"], ["IFA2014"],
-          ["ruby", "programming"] 
+          ["ruby", "programming"] ,
+          ["linux"], ["ubuntu"], ["debian", "linux"], ["kernel"],
+          ["linux", "security"], ["infosec"], ["data", "breach"], ["cyber", "hacking"], 
+          ["mobile", "malware"], ["internet", "privacy"],
+          ["server", "security"],
+          ["black", "metal"], ["death", "metal"], ["doom", "metal"], ["metal", "music"],
+          ["startups"], ["Entrepreneur"], ["funding"], ["startup", "incubator"],
+          ["sql", "injection"], ["mysql"], ["xss", "attack"], ["appsec"], ["hacking"],
+          ["security", "vulnerability"], ["exploit", "security"]          
         ])
   end
 
