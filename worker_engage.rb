@@ -149,49 +149,44 @@ $lisa_conversation = LisaTheConversantBird.new({
   :deliver_conversations_to => "maku@makuchaku.in"    
 })
 
- conversations = $lisa_conversation.start_watching_conversations([
-    ["#design", "#typography"], ["#fonts"], ["#typeface"], ["#Design", "#photoshop"],
-    ['#android'], ["#googleplay"],
-    ['#marketing', '#seo'], ["#MarketingTips"],
-    ['#growthhacking'],
-    ['#android', "#app"], 
-    ['#iphone', '#app'], 
-    ["#iphone", "#jailbreak"],
-    ["#app", "#development"],
-    ['#startup'], 
-    ["#Entrepreneur"], ["#Venture", "#Capital"], ["#Crowdfunding", "startup"],
-    ['#cloud', '#analytics'], 
-    ["#windows", "#mobile"], ["#winmo"],
-    ["#ycombinator"], ["#Startup", "#School"],
-    ["#funding", "#invest"],
-    ["#social", "#media"],
-    ["#WebsiteDesign"],
-    ["#WebDevelopment"],
-    ["#angularjs"], ["#javascript"], ["#ubuntu"], ["#smartwatch"], 
-    ["#android", "#wear"], ["#moto360"], ["#IFA2014"],
-    ["rubyonrails"], ["#backbonejs"], ["#apple", '#swift'], ["#python"], ["#lamp", "#php"],
-    ["#startupchile"]
+  keywords = [
+    [["#design", "#typography"], ["#fonts"], ["#typeface"], ["#Design", "#photoshop"]],
+    [['#android'], ["#googleplay"], ['#android', "#app"], ['#iphone', '#app'], ["#iphone", "#jailbreak"]],
+    [['#marketing', '#seo'], ["#MarketingTips"], ['#growthhacking'], ["#Entrepreneur"], ["#Crowdfunding", "startup"]],
+    [["#app", "#development"], ['#startup'], ["#Venture", "#Capital"], ['#cloud', '#analytics']],
+    [["#windows", "#mobile"], ["#winmo"], ["#ycombinator"], ["#Startup", "#School"], ["#funding", "#invest"]],
+    [["#social", "#media"], ["#WebsiteDesign"], ["#WebDevelopment"], ["#angularjs"], ["#javascript"]],
+    [["#ubuntu"], ["#smartwatch"], ["#android", "#wear"], ["#moto360"]],
+    [["rubyonrails"], ["#backbonejs"], ["#apple", '#swift'], ["#python"], ["#lamp", "#php"]]
+  ]
 
-    # ['food', 'delicious'],
-    # ['food', 'cook', 'recipe'],
-    # ['cake', 'recipe'],
-    # ["italian", "cuisine"],
-    # ["cuisine"],
-    # ["celebrity", "chef"],
-    # ["top", "chef"],
-    # ["masterchef"],
-    # ["ferrari"],
-    # ["bmw"],
-    # ["honda"],
-    # ["electric", "cars"],
-    # ["hybrid", "cars"],
-    # ["sushi"], ["grilled", "food"], ["salad"], ["johnny", "rockets"], ["lebanese", "food"], ["fat", "lulu"], 
-    # ["italian", "pizza"],
-    # ["pagani"], ["mclaren"], 
-    # ["top", "gear"]
- ])
+  keywords.each { |keywords_array|
+    puts keywords_array
+    conversations = $lisa_conversation.start_watching_conversations(keywords_array)
+    pp conversations
+  }
 
- pp conversations
+ #  conversations = $lisa_conversation.start_watching_conversations([
+ #    # ['food', 'delicious'],
+ #    # ['food', 'cook', 'recipe'],
+ #    # ['cake', 'recipe'],
+ #    # ["italian", "cuisine"],
+ #    # ["cuisine"],
+ #    # ["celebrity", "chef"],
+ #    # ["top", "chef"],
+ #    # ["masterchef"],
+ #    # ["ferrari"],
+ #    # ["bmw"],
+ #    # ["honda"],
+ #    # ["electric", "cars"],
+ #    # ["hybrid", "cars"],
+ #    # ["sushi"], ["grilled", "food"], ["salad"], ["johnny", "rockets"], ["lebanese", "food"], ["fat", "lulu"], 
+ #    # ["italian", "pizza"],
+ #    # ["pagani"], ["mclaren"], 
+ #    # ["top", "gear"]
+ #  ])
+
+ # pp conversations
 
 
 
