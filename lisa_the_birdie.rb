@@ -467,12 +467,14 @@ class LisaTheChattyBird
     if @lisa.is_tweet_of_basic_interest?(tweet, :live) == true
       # log(tweet)
 
-      @live_tweets << BirdFood.new(tweet, {
+      bird_food << BirdFood.new(tweet, {
         :clonable => @lisa.is_clonable?(tweet, :live),
         :retweetable => @lisa.is_retweetable?(tweet, :live),
         :starrable => @lisa.is_starrable?(tweet, :live),
         :followable => false #@lisa.is_followable?(tweet.user, :live)  # Don't engage in following from here - can lead to very bad bans (as all the people will generally be of high quality)
       }, tweet.user.handle)
+      puts bird_food
+      @live_tweets << bird_food
 
       print "Q"
     end #if
