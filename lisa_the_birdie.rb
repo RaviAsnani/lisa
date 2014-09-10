@@ -463,12 +463,9 @@ class LisaTheChattyBird
 
   # Push the live tweets into an queue for later processing
   def process_live_tweet(tweet)
+    #log(tweet)
     if @lisa.is_tweet_of_basic_interest?(tweet, :live) == true
-      #log(tweet)
-
-      # @live_tweets << BirdFood.new(tweet, :clone)  if @lisa.is_clonable?(tweet, :live) == true
-      # @live_tweets << BirdFood.new(tweet, :retweet)  if @lisa.is_retweetable?(tweet, :live) == true
-      # @live_tweets << BirdFood.new(tweet, :star)  if @lisa.is_starrable?(tweet, :live) == true
+      # log(tweet)
 
       @live_tweets << BirdFood.new(tweet, {
         :clonable => @lisa.is_clonable?(tweet, :live),
