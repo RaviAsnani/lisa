@@ -44,7 +44,10 @@ def engage_by_elite_tweets
           ["WebsiteDesign"],
           ["WebDevelopment"], 
           ["angularjs"], ["javascript"], ["ubuntu"], ["smartwatch"], ["android", "wear"], ["moto360"], ["IFA2014"],
-          ["ruby", "programming"] 
+          ["ruby", "programming"],
+          ['world', 'economy'], ['world', 'peace'], ['auto', 'biography'], 
+          ['music'], ['motivational'], ['app', 'review'], ['health', 'tips'], ['healthy', 'lifestyle'],
+          ['famous', 'quotes']
         ])
   end
 
@@ -95,7 +98,11 @@ def engage_by_search
                   ["#social", "#media"],
                   ["#WebsiteDesign"],
                   ["#WebDevelopment"], ["#smartwatch"], 
-                  ["#android", "#wear"]
+                  ["#android", "#wear"],
+                  ['#world', '#economy'], ['#world', '#peace'], ['#auto', '#biography'], 
+                  ['#music'], ['#motivational'], ['#app', '#review'], ['#health', '#tips'], 
+                  ['#healthy', '#lifestyle'],
+                  ['#famous', '#quotes'], ['#producthunt']
                ]
     lisa2.feast_on_keywords(keywords, 
                               {:starrable => true, :retweetable => true, :clonable => true, :followable => true},
