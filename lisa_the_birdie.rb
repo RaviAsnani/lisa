@@ -688,7 +688,7 @@ class LisaTheBirdie
     publish_stats(best_bird_feed)
     process_bird_feed(best_bird_feed, mode)
 
-    log @related_hashtags, "related hashtags"
+    log get_really_new_and_unique_hashtags(array_of_keywords, @related_hashtags), "related hashtags"
 
     # Return back all of the bird food to the caller for further processing
     return best_bird_feed
@@ -725,11 +725,21 @@ class LisaTheBirdie
 
 
 
+  # Given a bird_food, collect its hashtags
   def collect_hashtags(bird_food)
     bird_food.stuff.hashtags.each { |hashtag|
       @related_hashtags << hashtag.text.downcase
     }
-    @related_hashtags.uniq!
+    @related_hashtags
+  end
+
+
+  # Remove those hashtags which are present in search source
+  # source_hashtags => [["aa", "bb"], ...]
+  # found_hashtags => ["aa", "bb", ...]
+  def get_really_new_and_unique_hashtags(source_hashtags, found_hashtags)
+    source_hashtags = source_hashtags.flatten.join(",").downcase.gsub("#", "").split(",")
+    return found_hashtags.uniq - source_hashtags
   end
 
 
