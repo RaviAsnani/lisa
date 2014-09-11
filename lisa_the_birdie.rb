@@ -477,7 +477,7 @@ class LisaTheChattyBird
       }, tweet.user.handle)
       @live_tweets << bird_food
       
-      log bird_food.stuff, "process_live_tweet"
+      #log bird_food.stuff, "process_live_tweet"
       print "Q"
     end #if
   end
@@ -1001,6 +1001,9 @@ class LisaTheBirdie
   # TODO - how do we check if this is not a dup interaction on the user?
   # mode => :search || :live
   def is_tweet_of_basic_interest?(tweet, mode = :search)
+    # If the required lang check is false, don't consider the tweet
+    return false if tweet.lang != @config[:lang]
+
     # Don't process the tweet if we have already infested it before
     return false if check_hit?(:tweet_infested, tweet.id) == true
 
