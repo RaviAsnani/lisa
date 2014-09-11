@@ -237,6 +237,8 @@ class BirdFood < Struct.new(:stuff, :operations, :user_handle)
         primary_operations << :clone
       when 3 # clone + retweet
         primary_operations << :retweet
+      when 5 # star + retweet
+        primary_operations << :retweet
     end # case
 
     # Issue :follow as a primary operation only if there exists another primary operation along with follow
@@ -1023,8 +1025,8 @@ class LisaTheBirdie
 
       # If tweet is not a retweet or not a reply & has no pronouns
       if tweet.reply? == false and tweet.retweet? == false
-        pronouns = ["i ", "i'm", "am", 'we', 'me']
-        if Regexp.new(pronouns.join("|")).match(tweet.text.downcase) != nil
+        pronouns = ["i ", "i'm ", "am ", 'we ', 'me ', 'my ']
+        if Regexp.new(pronouns.join("|")).match(tweet.text.downcase) == nil
           log tweet, "yahoo"
           return true 
         end
