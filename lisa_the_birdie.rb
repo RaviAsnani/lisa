@@ -661,13 +661,15 @@ class LisaTheBirdie
       }
     }
 
+    # {"#iphone AND #apps" : ["#foo", "#bar"]}
+    @related_hashtags = []
   end
 
 
 
 
   # Searches and then eats the infested tweets/users
-  # array_of_keywords => [["foo", "bar"]]
+  # array_of_keywords => [["foo", "bar"], ...]
   # search_operator => "AND" || "OR"
   # Returns the bird_feed which was processed - for any further follow ups
   def feast_on_keywords(array_of_keywords, operations = nil, search_operator = "AND", mode = :real)
@@ -685,6 +687,8 @@ class LisaTheBirdie
     best_bird_feed = select_best_bird_food(bird_feed)
     publish_stats(best_bird_feed)
     process_bird_feed(best_bird_feed, mode)
+
+    log @related_hashtags, "related hashtags"
 
     # Return back all of the bird food to the caller for further processing
     return best_bird_feed
@@ -704,6 +708,7 @@ class LisaTheBirdie
     index = 0
     all_tweed_ids.each { |tweet_id|
       food_item = bird_feed[tweet_id]
+      collect_hashtags(food_item) # Collect all the related hashtags
       puts "-------------------------------------------------------------------"
       food_item.get_primary_operations.each { |operation|
         log "Processing [#{index}/#{length}] tweet_id=#{tweet_id} for #{food_item.get_primary_operations.to_json}"        
@@ -716,6 +721,15 @@ class LisaTheBirdie
 
       index += 1
     }
+  end
+
+
+
+  def collect_hashtags(bird_food)
+    bird_food.stuff.hashtags.each { |hashtag|
+      @related_hashtags << hashtag.text.downcase
+    }
+    @related_hashtags.uniq!
   end
 
 

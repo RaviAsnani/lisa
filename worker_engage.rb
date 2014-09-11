@@ -76,95 +76,95 @@ $parse_auth = {
   :api_key => "yVnIz9AoDA3XlZPEMlG7tR9icMdcimm6Cvdxlush" 
 }
 
-  # # Main execution starts here
-  # lisa2 = LisaTheBirdie.new({
-  #     :auth => $auth,
-  #     :parse => $parse_auth,
-  #     :exclude => ["yobitchme", "Easy_Branches", "RachelMajor2000", 
-  #                   "gamedev", "indiedev", "Audiograbber", "buy", "deal", "biz"],
-  #     :lang => "en", 
-  #     :tweet => {
-  #       :min_retweet_count => 1, 
-  #       :min_star_count => 1,
-  #       :moderate_retweet_count => 2,
-  #       :moderate_star_count => 2,  
-  #       :high_retweet_count => 5,
-  #       :high_star_count => 5   # To get more starrable tweets into the honeypot :)
-  #     },
-  #     :user => {
-  #       :followers_to_friends_ratio => 0.7,
-  #       :min_followers_count => 1000,
-  #       :min_star_count => 25,
-  #       :min_tweet_count => 1000,
-  #       :account_age => 0
-  #     }      
-  #   })
+  # Main execution starts here
+  lisa2 = LisaTheBirdie.new({
+      :auth => $auth,
+      :parse => $parse_auth,
+      :exclude => ["yobitchme", "Easy_Branches", "RachelMajor2000", 
+                    "gamedev", "indiedev", "Audiograbber", "buy", "deal", "biz"],
+      :lang => "en", 
+      :tweet => {
+        :min_retweet_count => 1, 
+        :min_star_count => 1,
+        :moderate_retweet_count => 2,
+        :moderate_star_count => 2,  
+        :high_retweet_count => 5,
+        :high_star_count => 5   # To get more starrable tweets into the honeypot :)
+      },
+      :user => {
+        :followers_to_friends_ratio => 0.7,
+        :min_followers_count => 1000,
+        :min_star_count => 25,
+        :min_tweet_count => 1000,
+        :account_age => 0
+      }      
+    })
 
-  # lisa2.rate_limit(:looper_internal) {
-  #   puts "\n\n=================RUN 2===================="
-  #   keyword_set = [
-  #                   #["#design", "#typography"], ["#fonts"], ["#typeface"], ["#Design", "#photoshop"],
-  #                   #['#android'], ["#googleplay"],
-  #                   #['#marketing', '#seo'], ["#MarketingTips"],
-  #                   #['#growthhacking'],
-  #                   #['#android', "#app"], 
-  #                   ['#iphone', '#app'], 
-  #                   #["#iphone", "#jailbreak"],
-  #                   #["#app", "#development"],
-  #                   #['#startup'], ["#Entrepreneur"], ["#Venture", "#Capital"], ["#Crowdfunding", "startup"],
-  #                   #['#cloud', '#analytics'], 
-  #                   #["#windows", "#mobile"], ["#winmo"],
-  #                   #["#ycombinator"], ["#Startup", "#School"],
-  #                   #["#funding", "#invest"],
-  #                   #["#social", "#media"],
-  #                   #["#WebsiteDesign"],
-  #                   #["#WebDevelopment"],
-  #                   #["#angularjs"], ["#javascript"], ["#ubuntu"], ["#smartwatch"], 
-  #                   #["#android", "#wear"], ["#moto360"], ["#IFA2014"],
-  #                   #["rubyonrails"], ["#backbonejs"], ["#apple", '#swift'], ["#python"], ["#lamp", "#php"],
-  #                   #["#startupchile"]
-  #                ]
-  #   lisa2.feast_on_keywords(keyword_set, 
-  #                     {:starrable => true, :retweetable => true, :clonable => true, :followable => true}, 
-  #                     "AND", :preview)
-  # }
+  lisa2.rate_limit(:looper_internal) {
+    puts "\n\n=================RUN 2===================="
+    keyword_set = [
+                    ["#design", "#typography"], ["#fonts"], ["#typeface"], ["#Design", "#photoshop"],
+                    ['#android'], ["#googleplay"],
+                    ['#marketing', '#seo'], ["#MarketingTips"],
+                    ['#growthhacking'],
+                    ['#android', "#app"], 
+                    ['#iphone', '#app'], 
+                    ["#iphone", "#jailbreak"],
+                    ["#app", "#development"],
+                    ['#startup'], ["#Entrepreneur"], ["#Venture", "#Capital"], ["#Crowdfunding", "startup"],
+                    ['#cloud', '#analytics'], 
+                    ["#windows", "#mobile"], ["#winmo"],
+                    ["#ycombinator"], ["#Startup", "#School"],
+                    ["#funding", "#invest"],
+                    ["#social", "#media"],
+                    ["#WebsiteDesign"],
+                    ["#WebDevelopment"],
+                    ["#angularjs"], ["#javascript"], ["#ubuntu"], ["#smartwatch"], 
+                    ["#android", "#wear"], ["#moto360"], ["#IFA2014"],
+                    ["rubyonrails"], ["#backbonejs"], ["#apple", '#swift'], ["#python"], ["#lamp", "#php"],
+                    ["#startupchile"]
+                 ]
+    lisa2.feast_on_keywords(keyword_set, 
+                      {:starrable => true, :retweetable => true, :clonable => true, :followable => true}, 
+                      "AND", :preview)
+  }
 
 #end # End looper
 
 
-$lisa_conversation = LisaTheConversantBird.new({
-  :auth => $auth,
-  :parse => $parse_auth,
-  :exclude => ["yobitchme", "Easy_Branches", "RachelMajor2000", 
-                "gamedev", "indiedev", "Audiograbber", "buy", "deal", "biz", 'skjain_05'],
-  :user => {
-    :followers_to_friends_ratio => 0.2,
-    :min_followers_count => 200,
-    :min_star_count => 25,
-    :min_tweet_count => 300,
-    :account_age => 0
-  },
-  :max_count_per_search => 100,
-  :max_results_per_search => 2,
-  :deliver_conversations_to => "maku@makuchaku.in"    
-})
+# $lisa_conversation = LisaTheConversantBird.new({
+#   :auth => $auth,
+#   :parse => $parse_auth,
+#   :exclude => ["yobitchme", "Easy_Branches", "RachelMajor2000", 
+#                 "gamedev", "indiedev", "Audiograbber", "buy", "deal", "biz", 'skjain_05'],
+#   :user => {
+#     :followers_to_friends_ratio => 0.2,
+#     :min_followers_count => 200,
+#     :min_star_count => 25,
+#     :min_tweet_count => 300,
+#     :account_age => 0
+#   },
+#   :max_count_per_search => 100,
+#   :max_results_per_search => 2,
+#   :deliver_conversations_to => "maku@makuchaku.in"    
+# })
 
-  keywords = [
-    [["#design", "#typography"], ["#fonts"], ["#typeface"], ["#Design", "#photoshop"]],
-    [['#android'], ["#googleplay"], ['#android', "#app"], ['#iphone', '#app'], ["#iphone", "#jailbreak"]],
-    [['#marketing', '#seo'], ["#MarketingTips"], ['#growthhacking'], ["#Entrepreneur"], ["#Crowdfunding", "startup"]],
-    [["#app", "#development"], ['#startup'], ["#Venture", "#Capital"], ['#cloud', '#analytics']],
-    [["#windows", "#mobile"], ["#winmo"], ["#ycombinator"], ["#Startup", "#School"], ["#funding", "#invest"]],
-    [["#social", "#media"], ["#WebsiteDesign"], ["#WebDevelopment"], ["#angularjs"], ["#javascript"]],
-    [["#ubuntu"], ["#smartwatch"], ["#android", "#wear"], ["#moto360"]],
-    [["rubyonrails"], ["#backbonejs"], ["#apple", '#swift'], ["#python"], ["#lamp", "#php"]]
-  ]
+#   keywords = [
+#     [["#design", "#typography"], ["#fonts"], ["#typeface"], ["#Design", "#photoshop"]],
+#     [['#android'], ["#googleplay"], ['#android', "#app"], ['#iphone', '#app'], ["#iphone", "#jailbreak"]],
+#     [['#marketing', '#seo'], ["#MarketingTips"], ['#growthhacking'], ["#Entrepreneur"], ["#Crowdfunding", "startup"]],
+#     [["#app", "#development"], ['#startup'], ["#Venture", "#Capital"], ['#cloud', '#analytics']],
+#     [["#windows", "#mobile"], ["#winmo"], ["#ycombinator"], ["#Startup", "#School"], ["#funding", "#invest"]],
+#     [["#social", "#media"], ["#WebsiteDesign"], ["#WebDevelopment"], ["#angularjs"], ["#javascript"]],
+#     [["#ubuntu"], ["#smartwatch"], ["#android", "#wear"], ["#moto360"]],
+#     [["rubyonrails"], ["#backbonejs"], ["#apple", '#swift'], ["#python"], ["#lamp", "#php"]]
+#   ]
 
-  keywords.each { |keywords_array|
-    puts keywords_array
-    conversations = $lisa_conversation.start_watching_conversations(keywords_array)
-    pp conversations
-  }
+#   keywords.each { |keywords_array|
+#     puts keywords_array
+#     conversations = $lisa_conversation.start_watching_conversations(keywords_array)
+#     pp conversations
+#   }
 
  #  conversations = $lisa_conversation.start_watching_conversations([
  #    # ['food', 'delicious'],
