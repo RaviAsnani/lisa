@@ -465,7 +465,7 @@ class LisaTheChattyBird
 
   # Push the live tweets into an queue for later processing
   def process_live_tweet(tweet)
-    log(tweet)
+    #log(tweet)
     if @lisa.is_tweet_of_basic_interest?(tweet, :live) == true
       # log(tweet)
 
@@ -475,9 +475,9 @@ class LisaTheChattyBird
         :starrable => @lisa.is_starrable?(tweet, :live),
         :followable => false #@lisa.is_followable?(tweet.user, :live)  # Don't engage in following from here - can lead to very bad bans (as all the people will generally be of high quality)
       }, tweet.user.handle)
-      puts bird_food
       @live_tweets << bird_food
-
+      
+      log bird_food.stuff, "process_live_tweet"
       print "Q"
     end #if
   end
@@ -493,11 +493,10 @@ class LisaTheChattyBird
         if food_item.nil?
           random_sleep
         else
+          log food_item.stuff, "processing : #{food_item.get_primary_operations}"
           food_item.get_primary_operations.each { |operation|
             if operation == :follow
               @lisa.send(operation, food_item.stuff.user, true, :real)
-            elsif operation == :clone
-              @lisa.send(operation, food_item.stuff, :real, true) # don't use the @via mention
             else
               @lisa.send(operation, food_item.stuff, :real)
             end
@@ -809,27 +808,26 @@ class LisaTheBirdie
 
 
   # NOTE - Actually does the clone
-  def clone(tweet, mode = :real, include_via = true)
+  def clone(tweet, mode = :real)
     return false if check_hit?(:tweet_infested, tweet.id, :verbose) == true
     return false if is_bird_feed_usage_in_limit?(:clone) == false
 
     clone_text = tweet.text
 
-    if include_via == true
+    if tweet.text.index("@") != nil
       # Attribute the tweet to an end user only if it already has a @mention. 100% clone it otherwise
       clone_text = "#{tweet.text} via @#{tweet.user.handle}" if tweet.text.index("@") != nil
       clone_text = tweet.text if clone_text.length > 140 # revert back to original text if new length with "via .@foo" > 140
     end
     
     #log("Cloning tweet (id=>#{tweet.id}) : [#{tweet.user.handle}] : #{clone_text}")
-    clone_text.gsub!(".@", "@") # first convert all .@ to @ to bring consistency
-    clone_text.gsub!("@", ".@") # then convert all @ to .@
-    log(tweet, "CLONE")
+    #clone_text.gsub!(".@", "@") # first convert all .@ to @ to bring consistency
+    #clone_text.gsub!("@", ".@") # then convert all @ to .@
+
     return if mode == :preview
-
     record_hit(:tweet_infested, tweet.id)
+    rate_limit(:clone) {puts "cloning...."; client.update(clone_text) }
 
-    rate_limit(:clone) { client.update(clone_text) }
     increment_bird_feed_usage(:clone)
     random_sleep(SLEEP_AFTER_ACTION, 1, SLEEP_AFTER_ACTION_BASE)
   end   
@@ -1025,9 +1023,9 @@ class LisaTheBirdie
 
       # If tweet is not a retweet or not a reply & has no pronouns
       if tweet.reply? == false and tweet.retweet? == false
-        pronouns = ["i ", "i'm ", "am ", 'we ', 'me ', 'my ']
+        pronouns = [" i ", " i'm ", " am ", ' we ', ' me ', ' my ']
         if Regexp.new(pronouns.join("|")).match(tweet.text.downcase) == nil
-          log tweet, "yahoo"
+          #log tweet, "yahoo"
           return true 
         end
       end
