@@ -232,7 +232,7 @@ class BirdFood < Struct.new(:stuff, :operations, :user_handle)
       when 1 # only retweet
         primary_operations << :retweet
       when 6 # star + clone
-        primary_operations << :star
+        primary_operations << :clone
       when 7 # star + clone + retweet
         primary_operations << :clone
       when 3 # clone + retweet
