@@ -467,7 +467,7 @@ class LisaTheChattyBird
     if @lisa.is_tweet_of_basic_interest?(tweet, :live) == true
       # log(tweet)
 
-      bird_food << BirdFood.new(tweet, {
+      bird_food = BirdFood.new(tweet, {
         :clonable => @lisa.is_clonable?(tweet, :live),
         :retweetable => @lisa.is_retweetable?(tweet, :live),
         :starrable => @lisa.is_starrable?(tweet, :live),
