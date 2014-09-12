@@ -703,7 +703,7 @@ class LisaTheBirdie
       and @recursive_search_count < @config[:resursive_search][:count] \
       and new_search_hashtags.length != 0
         @related_hashtags = []
-        feast_on_keywords(new_search_hashtags, operations, search_operator, mode, is_recursive)
+        feast_on_keywords(new_search_hashtags, operations, search_operator, mode)
     end
 
     # Return back all of the bird food to the caller for further processing
@@ -756,7 +756,9 @@ class LisaTheBirdie
   def get_new_and_unique_hashtags(source_hashtags, found_hashtags)
     # normalize source hashtags
     source_hashtags = source_hashtags.flatten.join(",").downcase.split(",")
-    return found_hashtags.uniq - source_hashtags
+    hashtags = found_hashtags.uniq - source_hashtags
+    results = []; hashtags.each {|tag| results << [tag] }
+    return results
   end
 
 
