@@ -617,8 +617,13 @@ class LisaTheBirdie
         :account_age => 0
       },
       :exclude => [], # Array of strings
-      :max_count_per_search => 100
+      :max_count_per_search => 100,
+      :resursive_search => {
+        :enabled => false, # if true, the newly found hashtags from searched tweets will be used to search again
+        :count => 0 # Will recursively do these many searches
+      }
     }
+    @recursive_search_count = 0
 
     @config = default_config.merge(config)
 
@@ -672,8 +677,9 @@ class LisaTheBirdie
   # array_of_keywords => [["foo", "bar"], ...]
   # search_operator => "AND" || "OR"
   # Returns the bird_feed which was processed - for any further follow ups
-  # if is_recursive is true, the newly found hashtags from searched tweets will be used to search again
-  def feast_on_keywords(array_of_keywords, operations = nil, search_operator = "AND", mode = :real, is_recursive = false)
+  def feast_on_keywords(array_of_keywords, operations = nil, search_operator = "AND", mode = :real)
+    @recursive_search_count += 1
+    log @recursive_search_count, "recursive search count"
     log array_of_keywords, "Array of Keywords"
     operations = {:starrable => true, :retweetable => true, :clonable => true, :followable => true} if operations == nil
     bird_feed = {}
@@ -693,9 +699,11 @@ class LisaTheBirdie
     log new_search_hashtags, "new related hashtags"
 
     # If related_hashtags are available, go and search them
-    if is_recursive == true and new_search_hashtags.length != 0
-      @related_hashtags = []
-      feast_on_keywords(new_search_hashtags, operations, search_operator, mode, is_recursive)
+    if @config[:resursive_search][:enabled] == true \
+      and @recursive_search_count < @config[:resursive_search][:count]
+      and new_search_hashtags.length != 0
+        @related_hashtags = []
+        feast_on_keywords(new_search_hashtags, operations, search_operator, mode, is_recursive)
     end
 
     # Return back all of the bird food to the caller for further processing

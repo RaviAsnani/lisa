@@ -97,7 +97,11 @@ $parse_auth = {
         :min_star_count => 25,
         :min_tweet_count => 1000,
         :account_age => 0
-      }      
+      },
+      :resursive_search => {
+        :enabled => true,
+        :count => 3
+      } 
     })
 
   lisa2.rate_limit(:looper_internal) {
