@@ -81,7 +81,11 @@ def engage_by_search
           :high_retweet_count => 5,
           :high_star_count => 5   # To get more starrable tweets into the honeypot :)
         },
-        :max_count_per_search => 200   
+        :max_count_per_search => 200,
+        :resursive_search => {
+          :enabled => true,
+          :count => 3
+        }
       })
 
   
