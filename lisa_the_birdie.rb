@@ -668,6 +668,7 @@ class LisaTheBirdie
 
     # ["#foo", "#bar"]
     @related_hashtags = []
+    @all_hashtags = []
   end
 
 
@@ -678,6 +679,8 @@ class LisaTheBirdie
   # search_operator => "AND" || "OR"
   # Returns the bird_feed which was processed - for any further follow ups
   def feast_on_keywords(array_of_keywords, operations = nil, search_operator = "AND", mode = :real)
+    @all_hashtags += array_of_keywords
+    log @all_hashtags, "all hashtags"
     @recursive_search_count += 1
     log @recursive_search_count, "recursive search count"
     log array_of_keywords, "Array of Keywords"
@@ -695,7 +698,7 @@ class LisaTheBirdie
     publish_stats(best_bird_feed)
     process_bird_feed(best_bird_feed, mode)
 
-    new_search_hashtags = get_new_and_unique_hashtags(array_of_keywords, @related_hashtags)
+    new_search_hashtags = get_new_and_unique_hashtags(@all_hashtags, @related_hashtags)
     log new_search_hashtags, "new related hashtags"
 
     # If related_hashtags are available, go and search them
