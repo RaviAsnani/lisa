@@ -700,7 +700,7 @@ class LisaTheBirdie
 
     # If related_hashtags are available, go and search them
     if @config[:resursive_search][:enabled] == true \
-      and @recursive_search_count < @config[:resursive_search][:count]
+      and @recursive_search_count < @config[:resursive_search][:count] \
       and new_search_hashtags.length != 0
         @related_hashtags = []
         feast_on_keywords(new_search_hashtags, operations, search_operator, mode, is_recursive)
