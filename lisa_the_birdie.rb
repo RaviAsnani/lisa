@@ -1168,7 +1168,7 @@ class LisaTheBirdie
     if mode == :live
       # Should have no media
       if tweet.media? == false \
-          and is_randomly_infestable_tweet?(tweet) == true
+          and is_randomly_infestable_tweet?(tweet, 3) == true
         return true
       end
     end
