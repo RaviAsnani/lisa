@@ -661,7 +661,7 @@ class LisaTheBirdie
       }
     }
 
-    # {"#iphone AND #apps" : ["#foo", "#bar"]}
+    # ["#foo", "#bar"]
     @related_hashtags = []
   end
 
@@ -672,8 +672,9 @@ class LisaTheBirdie
   # array_of_keywords => [["foo", "bar"], ...]
   # search_operator => "AND" || "OR"
   # Returns the bird_feed which was processed - for any further follow ups
-  def feast_on_keywords(array_of_keywords, operations = nil, search_operator = "AND", mode = :real)
-    puts "Mode : #{mode}"
+  # if is_recursive is true, the newly found hashtags from searched tweets will be used to search again
+  def feast_on_keywords(array_of_keywords, operations = nil, search_operator = "AND", mode = :real, is_recursive = false)
+    log array_of_keywords, "Array of Keywords"
     operations = {:starrable => true, :retweetable => true, :clonable => true, :followable => true} if operations == nil
     bird_feed = {}
 
@@ -688,7 +689,14 @@ class LisaTheBirdie
     publish_stats(best_bird_feed)
     process_bird_feed(best_bird_feed, mode)
 
-    log get_really_new_and_unique_hashtags(array_of_keywords, @related_hashtags), "related hashtags"
+    new_search_hashtags = get_new_and_unique_hashtags(array_of_keywords, @related_hashtags)
+    log new_search_hashtags, "new related hashtags"
+
+    # If related_hashtags are available, go and search them
+    if is_recursive == true and new_search_hashtags.length != 0
+      @related_hashtags = []
+      feast_on_keywords(new_search_hashtags, operations, search_operator, mode, is_recursive)
+    end
 
     # Return back all of the bird food to the caller for further processing
     return best_bird_feed
@@ -697,6 +705,7 @@ class LisaTheBirdie
 
 
   # Does the final outbound processing on bird_feed
+  # Also collects newly found hashtags
   # bird_feed => hash {tweet_id => BirdFood}
   def process_bird_feed(bird_feed, mode)
     # Process all bird food and call their related methods
@@ -713,7 +722,7 @@ class LisaTheBirdie
       food_item.get_primary_operations.each { |operation|
         log "Processing [#{index}/#{length}] tweet_id=#{tweet_id} for #{food_item.get_primary_operations.to_json}"        
         if operation == :follow
-          self.send(operation, food_item.stuff.user, false, mode) # TODO : flip to true
+          self.send(operation, food_item.stuff.user, true, mode)
         else
           self.send(operation, food_item.stuff, mode)
         end
@@ -728,17 +737,17 @@ class LisaTheBirdie
   # Given a bird_food, collect its hashtags
   def collect_hashtags(bird_food)
     bird_food.stuff.hashtags.each { |hashtag|
-      @related_hashtags << hashtag.text.downcase
+      @related_hashtags << "##{hashtag.text.downcase}" if hashtag.text.length > 4
     }
-    @related_hashtags
   end
 
 
   # Remove those hashtags which are present in search source
-  # source_hashtags => [["aa", "bb"], ...]
-  # found_hashtags => ["aa", "bb", ...]
-  def get_really_new_and_unique_hashtags(source_hashtags, found_hashtags)
-    source_hashtags = source_hashtags.flatten.join(",").downcase.gsub("#", "").split(",")
+  # source_hashtags => [["#aa", "#bb"], ...]
+  # found_hashtags => ["#aa", "#bb", ...]
+  def get_new_and_unique_hashtags(source_hashtags, found_hashtags)
+    # normalize source hashtags
+    source_hashtags = source_hashtags.flatten.join(",").downcase.split(",")
     return found_hashtags.uniq - source_hashtags
   end
 
