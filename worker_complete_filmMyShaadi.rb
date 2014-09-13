@@ -107,7 +107,7 @@ def engage_by_realtime
     })
 
   #lisa.start_chatting
-  lisa.start_chatting_with_friends_of(["tomshardware", "SANSInstitute", "anandshimpi"])
+  lisa.start_chatting_with_friends_of(["sue_bryce"])
 end
 
 
@@ -117,7 +117,7 @@ def engage
   threads = []
   threads << LisaToolbox.run_in_new_thread(:engage_by_elite_tweets) {engage_by_elite_tweets}
   threads << LisaToolbox.run_in_new_thread(:engage_by_search) {engage_by_search}
-  #threads << LisaToolbox.run_in_new_thread(:engage_by_realtime) {engage_by_realtime}
+  threads << LisaToolbox.run_in_new_thread(:engage_by_realtime) {engage_by_realtime}
   threads.each { |thread| thread.join }
 end
 
