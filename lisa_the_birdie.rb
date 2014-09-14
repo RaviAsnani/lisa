@@ -1166,9 +1166,9 @@ class LisaTheBirdie
     end
 
     if mode == :live
-      # Should have no media
+      # Should have no media and should have hashtags
       if tweet.media? == false \
-          and is_randomly_infestable_tweet?(tweet, 3) == true
+          and tweet.hashtags == true
         return true
       end
     end
