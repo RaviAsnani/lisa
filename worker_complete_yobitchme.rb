@@ -132,12 +132,25 @@ end
 
 
 
+
+def engage_by_realtime_on_my_timeline
+  lisa = LisaTheChattyBird.new({
+      :auth => $auth,
+      :name => "Lisa Realtime"
+    })
+
+  lisa.start_chatting
+end
+
+
+
 # Runs all engagement modes in different threads
 def engage
   threads = []
   threads << LisaToolbox.run_in_new_thread(:engage_by_elite_tweets) {engage_by_elite_tweets}
   threads << LisaToolbox.run_in_new_thread(:engage_by_search) {engage_by_search}
   threads << LisaToolbox.run_in_new_thread(:engage_by_realtime) {engage_by_realtime}
+  threads << LisaToolbox.run_in_new_thread(:engage_by_realtime_on_my_timeline) {engage_by_realtime_on_my_timeline}
   threads.each { |thread| thread.join }
 end
 

@@ -511,14 +511,14 @@ class LisaTheChattyBird
   # On a star
   # Follow the source user if target is self
   def on_user_star(source, target, tweet)
-    puts "--------------------------------------on_star--------------------------------------------"
-    log("Got starred (source : #{source.handle}, target : #{target.handle}) : #{tweet.text}")
-    log("#{target.handle} follows #{source.handle} ? : #{client.user(source.handle).following?}")  
-    if @client.user(source.handle).following? == false && source.handle != @myself
-      log("Will follow #{source.handle}")
-      #rate_limit(:on_star__follow) { @client.follow(source.handle) }
-    end
-    puts "--------------------------------------on_star--------------------------------------------"
+    # puts "--------------------------------------on_star--------------------------------------------"
+    # log("Got starred (source : #{source.handle}, target : #{target.handle}) : #{tweet.text}")
+    # log("#{target.handle} follows #{source.handle} ? : #{client.user(source.handle).following?}")  
+    # if @client.user(source.handle).following? == false && source.handle != @myself
+    #   log("Will follow #{source.handle}")
+    #   rate_limit(:on_star__follow) { @client.follow(source.handle) }
+    # end
+    # puts "--------------------------------------on_star--------------------------------------------"
   end
 
 
@@ -535,7 +535,7 @@ class LisaTheChattyBird
 
     log("Follow event from #{source.handle}")
     
-    message1 = "Hey! Thanks for following. Let's stay in touch."
+    message1 = "Hey! Thanks for following. You are awesome :-)"
     #message2 = "I forgot to mention the Yo! B*tch app we are working on. Would love your feedback on it. http://j.mp/yo_bitch"
 
     do_later(SLEEP_GENERIC, 2, SLEEP_GENERIC) { 
@@ -558,15 +558,26 @@ class LisaTheChattyBird
   end
 
 
-  # On a new timeline tweet
-  def on_user_timeline_tweet(tweet)
-    if tweet.text.downcase.index("rt @#{@myself}") != nil
-      log tweet, "RT on_user_timeline_tweet"
-      # I was retweeted, do something for the retweeter
-      message = "@#{tweet.user.handle}, thanks for the RT. Let's connect."
-      @lisa.tweet_without_media(message)
-      @lisa.follow(tweet.user)
-    end
+  # On a new timeline tweet - RETWEETS will be found here!
+  def on_user_timeline_tweet(tweet)  
+    if tweet.text.downcase.index("rt @#{@myself}") != nil \
+      and @lisa.client.status(tweet.id).user.following? == false # Don't use tweet.user.*? methods as they'll have stale results
+        # Sleeping nature of RW actions need this to be run in a new thread. 
+        # What if we receive another retweet when sleep is active - hence the thread
+        LisaToolbox.run_in_new_thread(:RT_on_user_timeline_tweet) {
+          log tweet, "RT on_user_timeline_tweet"
+          # I was retweeted, do something for the retweeter only if he's new
+          messages = [
+            "@#{tweet.user.handle}, love the RT. Let's shake hands on Twitter :)",
+            "@#{tweet.user.handle}, thanks for the RT. Let's connect",
+            "@#{tweet.user.handle}, RT's are awesome. Let's connect :)",
+            "@#{tweet.user.handle}, RT is much appreciated. Lets keep in touch!",
+          ]
+          message = messages[rand(messages.length)]
+          @lisa.tweet_without_media(message)  
+          @lisa.follow(tweet.user, false)
+        }
+    end # if
   end
 
 end
@@ -617,10 +628,10 @@ class LisaTheBirdie
         :high_star_count => 6   # To get more starrable tweets into the honeypot :)
       },
       :user => {
-        :followers_to_friends_ratio => 0.4,
-        :min_followers_count => 500,
-        :min_star_count => 25,
-        :min_tweet_count => 1500,
+        :followers_to_friends_ratio => 0.2,
+        :min_followers_count => 100,
+        :min_star_count => 5,
+        :min_tweet_count => 150,
         :account_age => 0
       },
       :exclude => [], # Array of strings
@@ -1211,7 +1222,7 @@ class LisaTheBirdie
     account_age = 0 # TODO
 
     return false if followers_count > 20*1000  # Anyone with more than 50,000 followers is practically a company/celebrity
-
+    
     followers_to_friends_ratio = (friends_count != 0 ? (followers_count/friends_count).to_f : 0)
     friends_to_followers_ratio = 1/followers_to_friends_ratio.to_f
 
