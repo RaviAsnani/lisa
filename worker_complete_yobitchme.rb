@@ -136,7 +136,7 @@ end
 def engage_by_realtime_on_my_timeline
   lisa = LisaTheChattyBird.new({
       :auth => $auth,
-      :name => "Lisa Realtime"
+      :name => "Lisa Realtime Selfie"
     })
 
   lisa.start_chatting
