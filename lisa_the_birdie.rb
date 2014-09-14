@@ -123,7 +123,7 @@ module LisaToolbox
     prefix.upcase!
     timestamp = Time.now.to_s.split(" ")[0..1].join(" ")
     if object.is_a?(Twitter::Tweet)
-      pre = "[#{prefix}] [#{timestamp}] [ST:#{object.favorite_count}, RT?:#{object.retweet?}, RT:#{object.retweet_count}, urls?:#{object.urls?}, media?:#{object.media?}, @M?:#{object.user_mentions?}, @Re?:#{object.reply?}] : [#{object.user.id}:@#{object.user.handle}]"
+      pre = "[#{prefix}] [#{timestamp}] [ID:#{object.id} ST:#{object.favorite_count}, RT?:#{object.retweet?}, RT:#{object.retweet_count}, urls?:#{object.urls?}, media?:#{object.media?}, @M?:#{object.user_mentions?}, @Re?:#{object.reply?}] : [#{object.user.id}:@#{object.user.handle}]"
       puts "\n=> #{pre} => #{object.text}" 
     elsif object.is_a?(Twitter::User)
       pre = "[#{prefix}] [#{timestamp}] [Fo:#{object.followers_count}, Fr:#{object.friends_count}, \
@@ -516,7 +516,7 @@ class LisaTheChattyBird
     log("#{target.handle} follows #{source.handle} ? : #{client.user(source.handle).following?}")  
     if @client.user(source.handle).following? == false && source.handle != @myself
       log("Will follow #{source.handle}")
-      rate_limit(:on_star__follow) { @client.follow(source.handle) }
+      #rate_limit(:on_star__follow) { @client.follow(source.handle) }
     end
     puts "--------------------------------------on_star--------------------------------------------"
   end
@@ -554,12 +554,19 @@ class LisaTheChattyBird
 
   # On twitter's stall warning
   def on_user_stall_warning(mode)
-    log("Streaming stall warning from Twiiter, mode => #{mode}")
+    log("Streaming stall warning from Twiter, mode => #{mode}")
   end
 
 
   # On a new timeline tweet
   def on_user_timeline_tweet(tweet)
+    if tweet.text.downcase.index("rt @#{@myself}") != nil
+      log tweet, "RT on_user_timeline_tweet"
+      # I was retweeted, do something for the retweeter
+      message = "@#{tweet.user.handle}, thanks for the RT. Let's connect."
+      @lisa.tweet_without_media(message)
+      @lisa.follow(tweet.user)
+    end
   end
 
 end
@@ -880,6 +887,18 @@ class LisaTheBirdie
 
 
 
+  # NOTE - Does a status update on the current user
+  def tweet_without_media(text, mode = :real)
+    return if mode == :preview
+    return if text.length > 140
+
+    rate_limit(:tweet_without_media) {
+      client.update(text) 
+    }
+  end
+
+
+
   # NOTE - Actually does the tweet with given media file
   # tweet => {:text => "text", :media_path => "/some/file/path"}
   def tweet_with_media(tweet, sleep_multiplier = 10, mode = :real)
@@ -1143,6 +1162,7 @@ class LisaTheBirdie
     if mode == :live
       # Should have media
       if tweet.media? == true \
+          tweet.hashtags? == true
           and is_randomly_infestable_tweet?(tweet) == true
         return true
       end
@@ -1168,7 +1188,7 @@ class LisaTheBirdie
     if mode == :live
       # Should have no media and should have hashtags
       if tweet.media? == false \
-          and tweet.hashtags == true
+          and tweet.hashtags? == true
         return true
       end
     end
