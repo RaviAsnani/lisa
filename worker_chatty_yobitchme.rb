@@ -2,7 +2,7 @@
 
 require "./lisa_the_birdie"
 
-
+# yobitchme
 $auth = {
   :consumer_key => '07y02Rx3pjpVlAqmwiLZeONBQ',
   :consumer_secret =>'SFN4ennNrCRu8eL7piWRRvJrpupi8IV5dDcN3gnPcms97LlRAt',
@@ -15,9 +15,14 @@ $parse_auth = {
   :api_key => "yVnIz9AoDA3XlZPEMlG7tR9icMdcimm6Cvdxlush" 
 }
 
+
+
 lisa = LisaTheChattyBird.new({
   :auth => $auth,
   :name => "Lisa Realtime"
 })
 
 lisa.start_chatting
+
+
+
