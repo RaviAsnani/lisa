@@ -162,6 +162,7 @@ module LisaToolbox
 
   # returns true if data was found for the klass
   def check_hit?(klass, data, verbosity=:silent)
+    sleep 0.1 # Prevent system abuse
     print "."
     command = "grep '#{data}' #{klass.to_s}.txt 1>/dev/null"
     result = system(command)
