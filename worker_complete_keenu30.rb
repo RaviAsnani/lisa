@@ -70,7 +70,12 @@ end
 
 def engage_by_realtime
   lisa = LisaTheChattyBird.new({
-      :auth => $auth
+      :auth => $auth,
+      :name => "Lisa Realtime"
+      :keywords => [
+                    ["bollywood"], ["movies"], ["srk"], ["star", "plus"], ["colors", "tv"], 
+                    ["indian", "cinema"]
+                   ]
     })
 
   #lisa.start_chatting
