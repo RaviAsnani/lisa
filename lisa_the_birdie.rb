@@ -1264,9 +1264,10 @@ class LisaTheBirdie
 
   # Returns true if the given text has any of the given keywords
   # keywords => Any sort of array of keywords. Will be flattened, hashes will be removed
-  def text_has_keywords?(text, keywords)
-    search_pattern = keywords.flatten.uniq.join("|").downcase.gsub("#", "")
-    return Regexp.new(search_pattern).match(text.downcase) == nil ? false : true
+  # Atleast min_matching keywords should match, defaults to >1
+  def text_has_keywords?(text, keywords, min_matching = 1)
+    search_pattern = keywords.flatten.uniq.join("\b|").downcase.gsub("#", "")
+    return text.scan(/#{search_pattern}/).uniq.length > 1 ? true : false
   end
 
 
