@@ -355,7 +355,10 @@ class LisaTheChattyBird
 
   # config is the same config object which is received by LisaTheBirdie
   def initialize(config_params)
+    raise if config_params[:keywords] == nil or config_params[:keywords].length == 0
     @config = config_params
+    @config[:keywords] = [] if @config[:keywords] == nil
+
     @stream = Twitter::Streaming::Client.new do |config|
       config.consumer_key        = @config[:auth][:consumer_key]
       config.consumer_secret     = @config[:auth][:consumer_secret]
@@ -446,8 +449,8 @@ class LisaTheChattyBird
       when Twitter::Streaming::StallWarning
         on_user_stall_warning(mode)
       else
-        #puts object.id if object.class == Twitter::Streaming::DeletedTweet
-        puts object, object.id, object.user_id
+        puts object, object.id, object.user_id if object.class != Twitter::Streaming::DeletedTweet
+        #puts object, object.id, object.user_id
     end # case
   end
 
@@ -467,18 +470,13 @@ class LisaTheChattyBird
   def process_live_tweet(tweet)
     #log(tweet)
     if @lisa.is_tweet_of_basic_interest?(tweet, :live) == true
-      # log(tweet)
-
       bird_food = BirdFood.new(tweet, {
-        :clonable => @lisa.is_clonable?(tweet, :live),
-        :retweetable => @lisa.is_retweetable?(tweet, :live),
+        :clonable => @lisa.is_clonable?(tweet, :live, @config[:keywords]),
+        :retweetable => @lisa.is_retweetable?(tweet, :live, @config[:keywords]),
         :starrable => @lisa.is_starrable?(tweet, :live),
         :followable => false #@lisa.is_followable?(tweet.user, :live)  # Don't engage in following from here - can lead to very bad bans (as all the people will generally be of high quality)
       }, tweet.user.handle)
       @live_tweets << bird_food
-      
-      #log bird_food.stuff, "process_live_tweet"
-      print "Q"
     end #if
   end
 
@@ -1096,13 +1094,9 @@ class LisaTheBirdie
 
     # Only if the tweet has a url AND (is either a via tweet or is not a mention)
     if mode == :live
-      # if tweet.urls? == true # and is_no_mention_or_via_mention_tweet?(tweet) == true
-      #   return true
-      # end
-
-      # If tweet is not a retweet or not a reply & has no pronouns
-      if tweet.reply? == false and tweet.retweet? == false
-        pronouns = [" i ", " i'm ", " am ", ' we ', ' me ', ' my ']
+      # If tweet is not a reply & has no pronouns
+      if tweet.reply? == false
+        pronouns = [" i ", " i'm ", " am ", ' we ', ' me ', ' my ', 'thank']
         if Regexp.new(pronouns.join("|")).match(tweet.text.downcase) == nil
           #log tweet, "yahoo"
           return true 
@@ -1147,8 +1141,10 @@ class LisaTheBirdie
     end
 
     if mode == :live
-      if is_randomly_infestable_tweet?(tweet) == true
-        return true
+      if is_randomly_infestable_tweet?(tweet) == true \
+        and is_randomly_infestable_tweet?(tweet) == true
+          print "Qs"
+          return true
       end
     end      
   
@@ -1159,7 +1155,8 @@ class LisaTheBirdie
 
   # If tweet is worthy of being retweeted
   # mode => :search || :live
-  def is_retweetable?(tweet, mode = :search)
+  # keywords => List of keywords needed when mode=:live
+  def is_retweetable?(tweet, mode = :search, keywords = [])
     if mode == :search
       # Not a reply, min retweet count, moderate star count
       if ((tweet.favorite_count >= @config[:tweet][:moderate_star_count] \
@@ -1171,10 +1168,10 @@ class LisaTheBirdie
     end
 
     if mode == :live
-      # Should have media and hashtags
+      # Should have media and has keywords of interest
       if tweet.media? == true \
-          and tweet.hashtags? == true \
-          and is_randomly_infestable_tweet?(tweet) == true
+          and text_has_keywords?(tweet.text, keywords) == true
+          print "Qr"
         return true
       end
     end    
@@ -1186,7 +1183,8 @@ class LisaTheBirdie
 
   # If tweet is worthy of being clonable (copy=>paste basically)
   # mode => :search || :live
-  def is_clonable?(tweet, mode = :search)
+  # keywords => List of keywords needed when mode=:live
+  def is_clonable?(tweet, mode = :search, keywords = [])
     if mode == :search
       # Not a reply, Min star count, High retweet count
       if (tweet.favorite_count >= @config[:tweet][:min_star_count] \
@@ -1197,9 +1195,10 @@ class LisaTheBirdie
     end
 
     if mode == :live
-      # Should have no media and should have hashtags
+      # Should have no media and has keywords of interest
       if tweet.media? == false \
-          and tweet.hashtags? == true
+          and text_has_keywords?(tweet.text, keywords) == true
+        print "Qc"
         return true
       end
     end
@@ -1262,7 +1261,19 @@ class LisaTheBirdie
   end
 
 
+
+  # Returns true if the given text has any of the given keywords
+  # keywords => Any sort of array of keywords. Will be flattened, hashes will be removed
+  def text_has_keywords?(text, keywords)
+    search_pattern = keywords.flatten.uniq.join("|").downcase.gsub("#", "")
+    return Regexp.new(search_pattern).match(text.downcase) == nil ? false : true
+  end
+
+
 end
+
+
+
 
 
 

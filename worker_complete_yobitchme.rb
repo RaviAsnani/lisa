@@ -123,7 +123,28 @@ end
 def engage_by_realtime
   lisa = LisaTheChattyBird.new({
       :auth => $auth,
-      :name => "Lisa Realtime"
+      :name => "Lisa Realtime",
+      :keywords => [
+                      ["#design", "#typography"], ["#fonts"], ["#typeface"], ["#Design", "#photoshop"],
+                      ['#android'], ["#googleplay"],
+                      ['#marketing', '#seo'], ["#MarketingTips"],
+                      ['#growthhacking'],
+                      ['#android', "#app"], 
+                      ['#iphone', '#app'], 
+                      ["#iphone", "#jailbreak"],
+                      ["#app", "#development"],
+                      ['#startup'], ["#Entrepreneur"], ["#Venture", "#Capital"], ["#Crowdfunding", "startup"],
+                      ['#cloud', '#analytics'], 
+                      ["#windows", "#mobile"], ["#winmo"],
+                      ["#ycombinator"], ["#Startup", "#School"],
+                      ["#funding", "#invest"],
+                      ["#social", "#media"],
+                      ["#WebsiteDesign"],
+                      ["#WebDevelopment"],
+                      ["#angularjs"], ["#javascript"], ["#ubuntu"], ["#smartwatch"], 
+                      ["#android", "#wear"], ["#moto360"], ["#IFA2014"],
+                      ["rubyonrails"], ["#backbonejs"], ["#apple", '#swift'], ["#python"], ["#lamp", "#php"]
+                   ]
     })
 
   #lisa.start_chatting
@@ -150,7 +171,7 @@ def engage
   threads << LisaToolbox.run_in_new_thread(:engage_by_elite_tweets) {engage_by_elite_tweets}
   threads << LisaToolbox.run_in_new_thread(:engage_by_search) {engage_by_search}
   threads << LisaToolbox.run_in_new_thread(:engage_by_realtime) {engage_by_realtime}
-  threads << LisaToolbox.run_in_new_thread(:engage_by_realtime_on_my_timeline) {engage_by_realtime_on_my_timeline}
+  #threads << LisaToolbox.run_in_new_thread(:engage_by_realtime_on_my_timeline) {engage_by_realtime_on_my_timeline}
   threads.each { |thread| thread.join }
 end
 

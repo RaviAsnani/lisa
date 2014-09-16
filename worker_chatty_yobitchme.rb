@@ -19,10 +19,32 @@ $parse_auth = {
 
 lisa = LisaTheChattyBird.new({
   :auth => $auth,
-  :name => "Lisa Realtime"
+  :name => "Lisa Realtime",
+  :keywords => [
+                  ["#design", "#typography"], ["#fonts"], ["#typeface"], ["#Design", "#photoshop"],
+                  ['#android'], ["#googleplay"],
+                  ['#marketing', '#seo'], ["#MarketingTips"],
+                  ['#growthhacking'],
+                  ['#android', "#app"], 
+                  ['#iphone', '#app'], 
+                  ["#iphone", "#jailbreak"],
+                  ["#app", "#development"],
+                  ['#startup'], ["#Entrepreneur"], ["#Venture", "#Capital"], ["#Crowdfunding", "startup"],
+                  ['#cloud', '#analytics'], 
+                  ["#windows", "#mobile"], ["#winmo"],
+                  ["#ycombinator"], ["#Startup", "#School"],
+                  ["#funding", "#invest"],
+                  ["#social", "#media"],
+                  ["#WebsiteDesign"],
+                  ["#WebDevelopment"],
+                  ["#angularjs"], ["#javascript"], ["#ubuntu"], ["#smartwatch"], 
+                  ["#android", "#wear"], ["#moto360"], ["#IFA2014"],
+                  ["rubyonrails"], ["#backbonejs"], ["#apple", '#swift'], ["#python"], ["#lamp", "#php"]
+               ]
 })
 
-lisa.start_chatting
+#lisa.start_chatting
+lisa.start_chatting_with_friends_of(["500startups", "pjain"])
 
 
 

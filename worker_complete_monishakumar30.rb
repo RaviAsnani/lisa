@@ -116,7 +116,30 @@ end
 def engage_by_realtime
   lisa = LisaTheChattyBird.new({
       :auth => $auth,
-      :name => "Lisa Realtime"
+      :name => "Lisa Realtime",
+      :keywords => [
+                      ["#design", "#typography"], ["#fonts"], ["#typeface"], ["#Design", "#photoshop"],
+                      ['#android'], ["#googleplay"],
+                      ['#marketing', '#seo'], ["#MarketingTips"],
+                      ['#growthhacking'],
+                      ['#android', "#app"], 
+                      ['#iphone', '#app'], 
+                      ["#iphone", "#jailbreak"],
+                      ["#app", "#development"],
+                      ['#startup'], ["#Entrepreneur"], ["#Venture", "#Capital"], ["#Crowdfunding", "startup"],
+                      ['#cloud', '#analytics'], 
+                      ["#windows", "#mobile"], ["#winmo"],
+                      ["#ycombinator"], ["#Startup", "#School"],
+                      ["#funding", "#invest"],
+                      ["#social", "#media"],
+                      ["#WebsiteDesign"],
+                      ["#WebDevelopment"], ["#smartwatch"], 
+                      ["#android", "#wear"],
+                      ['#world', '#economy'], ['#world', '#peace'], ['#auto', '#biography'], 
+                      ['#music'], ['#motivational'], ['#app', '#review'], ['#health', '#tips'], 
+                      ['#healthy', '#lifestyle'],
+                      ['#famous', '#quotes'], ['#producthunt']
+                   ]
     })
 
   #lisa.start_chatting

@@ -97,11 +97,21 @@ end
 def engage_by_realtime
   lisa = LisaTheChattyBird.new({
       :auth => $auth,
-      :name => "Lisa Realtime"
+      :name => "Lisa Realtime",
+      :keywords => [
+                    ["#linux"], ["#ubuntu"], ["#debian", "#linux"], ["#kernel"],
+                    ["#linux", "#security"], ["#infosec"], ["#data", "#breach"], ["#cyber", "#hacking"], 
+                    ["#mobile", "#malware"], ["#internet", "#privacy"],
+                    ["#server", "#security"],
+                    ["#black", "#metal"], ["#death", "#metal"], ["#doom", "#metal"], ["#metal", "#music"],
+                    ["#startups"], ["#Entrepreneur"], ["#funding"], ["#startup", "#incubator"],
+                    ["#sql", "#injection"], ["#mysql"], ["#xss", "#attack"], ["#appsec"], ["#hacking"],
+                    ["#security", "#vulnerability"], ["#exploit", "#security"]
+                   ]
     })
 
   #lisa.start_chatting
-  lisa.start_chatting_with_friends_of(["tomshardware", "SANSInstitute", "anandshimpi"])
+  lisa.start_chatting_with_friends_of(["tomshardware", "SANSInstitute", "nixcraft"])
 end
 
 

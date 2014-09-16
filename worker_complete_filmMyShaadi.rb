@@ -103,11 +103,24 @@ end
 def engage_by_realtime
   lisa = LisaTheChattyBird.new({
       :auth => $auth,
-      :name => "Lisa Realtime"
+      :name => "Lisa Realtime",
+      :keywords => [
+                      ['#indian', '#wedding'], ['#wedding'], ['#wedding', '#dress'], ['#wedding', '#video'],
+                      ['#wedding', '#planner'], ['#weddng', '#photography'], ['#wedding', '#ring'], ['#bride'],
+                      ['#groom'], ['#indian', '#shaadi'], ['#wedding', '#film'], ['#wedding', '#gurgaon'],
+                      ['#wedding', '#videography'],
+                      ['#canon', '#photography'], ['#canon', '#video'], ['#canon', '#dslr'], ['#canon', '#lens'],
+                      ['#nikon', '#photography'], ['#nikon', '#video'], ['#nikon', '#dslr'], ['#nikon', '#lens'],
+                      ['#wedding', '#ideas'], ['#wedding', '#planing'], ['#wedding', '#planner'], ['#wedding', '#destination'],
+                      ['#wedding', '#honeymoon'], ['#wedding', '#photos'], ['#wedding', '#fashion'],
+                      ['#wedding', '#service'], ['#wedding', '#live'], ['#wedding', '#inspiration'], ['#wedding', '#cake'],
+                      ['#wedding', '#blog'], ['#wedding', '#tips'], ['#wedding', '#makeup'], ['#wedding', '#gift'],
+                      ['#wedding', '#reception']
+                   ]
     })
 
   #lisa.start_chatting
-  lisa.start_chatting_with_friends_of(["sue_bryce"])
+  lisa.start_chatting_with_friends_of(["sue_bryce", "peter_hurley"])
 end
 
 
